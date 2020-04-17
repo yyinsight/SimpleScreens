@@ -50,24 +50,41 @@ along with this software (see the LICENSE.md file). If not, see
         </form-single>
 
         <form-list name="InvoiceAgingList" list="invoiceAgingList" skip-form="true" header-dialog="true" saved-finds="true" select-columns="true"
-                show-all-button="true" show-csv-button="true">
-            <entity-find entity-name="mantle.account.invoice.InvoicePaymentApplicationSummary" list="invoiceAgingList">
+                show-all-button="true" show-csv-button="true" show-xlsx-button="true">
+            <entity-find entity-name="mantle.account.invoice.InvoicePaymentApplicationSummary" list="invoiceAgingList" use-clone="true">
                 <search-form-inputs default-order-by="fromPseudoId,toPseudoId,invoiceId" skip-fields="fromRoleTypeId,toRoleTypeId"/>
+                <!-- IITM sub-select conditions -->
+                <econditions combine="or">
+                    <!-- NOTE: adjustment items are posted to GL by itemDate, all other items posted by invoiceDate; do query to match that -->
+                    <econditions>
+                        <econdition field-name="isAdjustment" operator="not-equals" value="Y" or-null="true"/>
+                        <econdition field-name="itemInvoiceDate" operator="less-equals" from="asOfDate"/>
+                    </econditions>
+                    <econditions>
+                        <econdition field-name="isAdjustment" value="Y"/>
+                        <econdition field-name="itemDate" operator="less-equals" from="asOfDate"/>
+                    </econditions>
+                </econditions>
+                <!-- PAPP sub-select conditions -->
+                <econdition field-name="appliedDate" operator="less-equals" from="asOfDate"/>
+                <!-- TPAPP sub-select conditions -->
+                <econdition field-name="toAppliedDate" operator="less-equals" from="asOfDate"/>
+                <!-- main select condition -->
                 <econdition field-name="fromRoleTypeId" ignore-if-empty="true"/>
                 <econdition field-name="toRoleTypeId" ignore-if-empty="true"/>
-                <econdition field-name="invoiceDate" operator="less-equals" from="asOfDate"/>
-                <econdition field-name="itemDate" operator="less-equals" from="asOfDate" or-null="true"/>
-                <econdition field-name="appliedDate" operator="less-equals" from="asOfDate"/>
-                <econdition field-name="itemsTotal" operator="not-equals" from="0.0"/>
                 <econditions combine="or">
-                    <econdition field-name="itemsTotal" operator="not-equals" to-field-name="amountApplied"/>
-                    <econdition field-name="amountApplied" operator="is-null"/>
+                    <econdition field-name="itemsTotal" operator="not-equals" to-field-name="totalAmountApplied"/>
+                    <econditions>
+                        <econdition field-name="itemsTotal" operator="not-equals" from="0.0"/>
+                        <econdition field-name="amountApplied" operator="is-null"/>
+                        <econdition field-name="toAmountApplied" operator="is-null"/>
+                    </econditions>
                 </econditions>
-                <select-field field-name="fromPartyId,toPartyId,invoiceId,invoiceDate,dueDate,itemsTotal,amountApplied"/>
+                <select-field field-name="fromPartyId,toPartyId,invoiceId,invoiceDate,dueDate,itemsTotal,amountApplied,toAmountApplied,totalAmountApplied"/>
             </entity-find>
             <row-actions>
                 <script><![CDATA[
-                    unpaidAmount = itemsTotal - (amountApplied ?: 0.0)
+                    unpaidAmount = itemsTotal - (amountApplied ?: 0.0) - (toAmountApplied ?: 0.0)
                     agingList = new ArrayList([null, null, null, null, null, null])
                     Timestamp dateTs = context.get(dateField)
                     Integer dateDays = dateTs != null ? asOfDate - dateTs : null
@@ -146,7 +163,11 @@ along with this software (see the LICENSE.md file). If not, see
             <field name="periodRemaining" from="agingList[5]" align="right" show-total="true" aggregate="sum"><header-field title="&gt; ${periodDays*4} days"/>
                 <default-field><display currency-unit-field="currencyUomId"/></default-field></field>
             <field name="unpaidAmount" align="right" show-total="true" aggregate="sum">
+                <default-field title="Unpaid"><display currency-unit-field="currencyUomId"/></default-field></field>
+            <field name="itemsTotal" align="right" show-total="true" aggregate="sum">
                 <default-field><display currency-unit-field="currencyUomId"/></default-field></field>
+            <field name="totalAmountApplied" align="right" show-total="true" aggregate="sum">
+                <default-field title="Applied"><display currency-unit-field="currencyUomId"/></default-field></field>
 
             <field name="findButton"><header-field title="Find"><submit/></header-field></field>
 
@@ -162,6 +183,7 @@ along with this software (see the LICENSE.md file). If not, see
             <form-list-column><field-ref name="period4"/></form-list-column>
             <form-list-column><field-ref name="periodRemaining"/></form-list-column>
             <form-list-column><field-ref name="unpaidAmount"/></form-list-column>
+            <!-- not displayed by default: <form-list-column><field-ref name="itemsTotal"/><field-ref name="totalAmountApplied"/></form-list-column> -->
         </form-list>
     </widgets>
 </screen>

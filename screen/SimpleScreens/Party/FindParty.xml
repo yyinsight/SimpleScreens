@@ -53,6 +53,14 @@ along with this software (see the LICENSE.md file). If not, see
                         <entity-find entity-name="mantle.party.RoleType"><order-by field-name="description"/></entity-find>
                     </entity-options></drop-down>
                 </default-field></field>
+                <field name="partyClassificationId"><default-field title="Customer Class">
+                    <drop-down allow-empty="true" no-current-selected-key="CustConsumer">
+                        <entity-options key="${partyClassificationId}" text="${description}">
+                            <entity-find entity-name="mantle.party.PartyClassification">
+                                <econdition field-name="classificationTypeEnumId" value="PcltCustomer"/>
+                                <order-by field-name="description"/></entity-find></entity-options>
+                    </drop-down>
+                </default-field></field>
                 <field name="accountPartyId"><default-field title="Sales Account">
                     <drop-down allow-empty="true">
                         <entity-options key="${partyId}" text="PartyNameTemplate">
@@ -76,35 +84,6 @@ along with this software (see the LICENSE.md file). If not, see
                 <field name="contactNumber"><default-field  title="" tooltip="Phone Number">
                     <label text="-"/><text-line size="8" maxlength="8"/></default-field></field>
 
-                <field name="creditCardTypeEnumId"><default-field title="">
-                    <drop-down><entity-options key="${enumId}" text="${description}">
-                        <entity-find entity-name="moqui.basic.Enumeration">
-                            <econdition field-name="enumTypeId" value="CreditCardType"/>
-                            <order-by field-name="description"/></entity-find>
-                    </entity-options></drop-down>
-                </default-field></field>
-                <field name="cardNumber"><default-field title=""><text-line size="16"/></default-field></field>
-                <field name="expireMonth">
-                    <default-field title=""><drop-down no-current-selected-key="${ec.l10n.format(ec.user.nowTimestamp, 'MM')}">
-                        <option key="01"/><option key="02"/><option key="03"/><option key="04"/><option key="05"/>
-                        <option key="06"/><option key="07"/><option key="08"/><option key="09"/><option key="10"/>
-                        <option key="11"/><option key="12"/>
-                    </drop-down></default-field>
-                </field>
-                <field name="expireYear">
-                    <default-field title=""><drop-down no-current-selected-key="${ec.l10n.format(ec.user.nowTimestamp, 'yyyy')}">
-                        <list-options list="org.moqui.util.StringUtilities.getYearList(10)"/></drop-down></default-field>
-                </field>
-                <field name="paymentGatewayConfigId"><default-field title="Payment Gateway">
-                    <drop-down allow-empty="true">
-                        <entity-options key="${paymentGatewayConfigId}" text="${description}">
-                            <entity-find entity-name="mantle.account.method.PaymentGatewayConfig">
-                                <econdition field-name="paymentGatewayTypeEnumId" operator="not-equals" value="PgtTest"/>
-                                <order-by field-name="description"/></entity-find>
-                        </entity-options>
-                    </drop-down>
-                </default-field></field>
-
                 <field name="address1"><default-field title="Address 1"><text-line size="30"/></default-field></field>
                 <field name="unitNumber"><default-field title="Unit"><text-line size="10"/></default-field></field>
                 <field name="address2"><default-field title="Address 2"><text-line size="30"/></default-field></field>
@@ -126,10 +105,43 @@ along with this software (see the LICENSE.md file). If not, see
                 <field name="postalCode"><default-field title="" tooltip="Zip/Postal Code"><text-line size="8"/></default-field></field>
                 <field name="postalCodeExt"><default-field title="" tooltip="Zip/Postal Code Extension"><text-line size="4"/></default-field></field>
 
+                <!-- commented based on loud and persistent user complaints, uncomment if needed:
+                <field name="creditCardTypeEnumId"><default-field title="">
+                    <drop-down><entity-options key="${enumId}" text="${description}">
+                        <entity-find entity-name="moqui.basic.Enumeration">
+                            <econdition field-name="enumTypeId" value="CreditCardType"/>
+                            <order-by field-name="description"/></entity-find>
+                    </entity-options></drop-down>
+                </default-field></field>
+                <field name="cardNumber"><default-field title="" tooltip="Leave blank to not add credit card">
+                    <text-line size="16"/></default-field></field>
+                <field name="expireMonth">
+                    <default-field title=""><drop-down no-current-selected-key="${ec.l10n.format(ec.user.nowTimestamp, 'MM')}">
+                        <option key="01"/><option key="02"/><option key="03"/><option key="04"/><option key="05"/>
+                        <option key="06"/><option key="07"/><option key="08"/><option key="09"/><option key="10"/>
+                        <option key="11"/><option key="12"/>
+                    </drop-down></default-field>
+                </field>
+                <field name="expireYear">
+                    <default-field title=""><drop-down no-current-selected-key="${ec.l10n.format(ec.user.nowTimestamp, 'yyyy')}">
+                        <list-options list="org.moqui.util.StringUtilities.getYearList(10)"/></drop-down></default-field>
+                </field>
+                <field name="paymentGatewayConfigId"><default-field title="Payment Gateway">
+                    <drop-down allow-empty="true">
+                        <entity-options key="${paymentGatewayConfigId}" text="${description}">
+                            <entity-find entity-name="mantle.account.method.PaymentGatewayConfig">
+                                <econdition field-name="paymentGatewayTypeEnumId" operator="not-equals" value="PgtTest"/>
+                                <order-by field-name="description"/></entity-find>
+                        </entity-options>
+                    </drop-down>
+                </default-field></field>
+                -->
+
                 <field name="submitButton"><default-field title="Create"><submit/></default-field></field>
 
                 <field-layout>
                     <field-ref name="roleTypeId"/>
+                    <field-ref name="partyClassificationId"/>
                     <field-ref name="accountPartyId"/>
                     <field-row-big title="Name"><field-ref name="firstName"/>
                         <field-ref name="lastName"/></field-row-big>
@@ -138,18 +150,20 @@ along with this software (see the LICENSE.md file). If not, see
                     <field-row-big title="Phone"><field-ref name="countryCode"/><field-ref name="areaCode"/>
                         <field-ref name="contactNumber"/></field-row-big>
 
-                    <field-row-big title="Card Number"><field-ref name="creditCardTypeEnumId"/>
-                        <field-ref name="cardNumber"/></field-row-big>
-                    <field-row-big title="Expire Date"><field-ref name="expireMonth"/>
-                        <field-ref name="expireYear"/></field-row-big>
-                    <field-ref name="paymentGatewayConfigId"/>
-
                     <field-row><field-ref name="address1"/><field-ref name="unitNumber"/></field-row>
                     <field-ref name="address2"/>
                     <field-row-big title="City/Zip"><field-ref name="city"/>
                         <field-ref name="postalCode"/><field-ref name="postalCodeExt"/></field-row-big>
                     <field-row-big title="Country/State"><field-ref name="countryGeoId"/>
                         <field-ref name="stateProvinceGeoId"/></field-row-big>
+
+                    <!--
+                    <field-row-big title="Card Number"><field-ref name="creditCardTypeEnumId"/>
+                        <field-ref name="cardNumber"/></field-row-big>
+                    <field-row-big title="Expire Date"><field-ref name="expireMonth"/>
+                        <field-ref name="expireYear"/></field-row-big>
+                    <field-ref name="paymentGatewayConfigId"/>
+                    -->
 
                     <field-ref name="submitButton"/>
                 </field-layout>
@@ -199,7 +213,8 @@ along with this software (see the LICENSE.md file). If not, see
             <field-layout><field-row-big><field-ref name="anyField"/><field-ref name="submitButton"/></field-row-big></field-layout>
         </form-single>
 
-        <form-list name="PartyListForm" list="documentList" skip-form="true" header-dialog="true">
+        <form-list name="PartyListForm" list="documentList" skip-form="true" header-dialog="true"
+                show-xlsx-button="true" show-csv-button="true" show-page-size="true">
             <field name="anyField"><header-field><text-line size="80"/></header-field></field>
 
             <field name="pseudoId">
@@ -234,7 +249,7 @@ along with this software (see the LICENSE.md file). If not, see
 
             <field name="classificationTypeEnumId"><header-field title="Class Type">
                 <widget-template-include location="component://webroot/template/screen/BasicWidgetTemplates.xml#enumDropDown">
-                    <set field="enumTypeId" value="PartyClassificationType"/><set field="noCurrentSelectedKey" value="PcltCustomer"/>
+                    <set field="enumTypeId" value="PartyClassificationType"/>
                     <set field="allowEmpty" value="true"/></widget-template-include>
             </header-field></field>
             <field name="partyClassificationId">
@@ -243,7 +258,7 @@ along with this software (see the LICENSE.md file). If not, see
                             value-field="partyClassificationId" label-field="description">
                         <depends-on field="classificationTypeEnumId"/></dynamic-options></drop-down>
                 </header-field>
-                <default-field><display text="${classifications ? classifications*.class.join(', ') : ''}"/></default-field>
+                <default-field><display text="${classifications ? classifications.findAll({(it.classFromDate == null || it.classFromDate &lt; System.currentTimeMillis()) &amp;&amp; (it.classThruDate == null || it.classThruDate &gt; System.currentTimeMillis())})*.class.join(', ') : ''}"/></default-field>
             </field>
 
             <field name="disabled">
@@ -261,7 +276,8 @@ along with this software (see the LICENSE.md file). If not, see
                         hlFieldDisplay = hlField
                         if (hlFieldDisplay.contains('.')) hlFieldDisplay = hlFieldDisplay.substring(hlFieldDisplay.lastIndexOf('.') + 1)
                         hlFieldDisplay = org.moqui.util.StringUtilities.camelCaseToPretty(hlFieldDisplay)
-                        hlListDisplay = hlList.collect({'"' + it.toString().replace('<em>', '<strong>').replace('</em>', '</strong>') + '"'})
+                        hlListDisplay = hlList.collect({'"' + org.moqui.util.WebUtilities.encodeHtml(it.toString().replace('<em>', '__EMO_').replace('</em>', '__EMC_'))
+                                .replace('__EMO_', '<strong>').replace('__EMC_', '</strong>') + '"'})
                     ]]></script>
                 </actions><widgets>
                     <label text="${hlFieldDisplay}: ${hlListDisplay.join(', ')}" type="div" encode="false"/>
