@@ -15,46 +15,67 @@ along with this software (see the LICENSE.md file). If not, see
 
 <#assign showDetail = (detail! == "true")>
 <#assign showDiff = (timePeriodIdList?size == 2)>
+<#assign showPercents = (percents! == "true")>
 <#assign showCharts = (charts! == "true")>
+<#assign currencyFormat = currencyFormat!"#,##0.00;(#,##0.00)">
+<#assign percentFormat = percentFormat!"0.0%">
+<#assign indentMult = indentMult!1>
+
 <#assign backgroundColors = ['rgba(92, 184, 92, 0.5)','rgba(91, 192, 222, 0.5)','rgba(240, 173, 78, 0.5)','rgba(217, 83, 79, 0.5)',
 'rgba(60, 118, 61, 0.5)','rgba(49, 112, 143, 0.5)','rgba(138, 109, 59, 0.5)','rgba(169, 68, 66, 0.5)',
 'rgba(223, 240, 216, 0.6)','rgba(217, 237, 247, 0.6)','rgba(252, 248, 227, 0.6)','rgba(242, 222, 222, 0.6)']>
 
-<#macro showClass classInfo depth>
+<#macro showClass classInfo depth showLess=false>
     <#-- skip classes with nothing posted -->
     <#if (classInfo.totalPostedNoClosingByTimePeriod['ALL']!0) == 0><#return></#if>
-
+    <#if showLess><#assign negMult = -1><#else><#assign negMult = 1></#if>
     <tr>
-        <td style="padding-left: ${(depth-1) * 2}.3em;">${ec.l10n.localize(classInfo.className)}</td>
+        <td style="padding-left: ${((depth-1) * indentMult) + 0.3}em;">${ec.l10n.localize(classInfo.className)}<#if showLess && depth == 1> (${ec.l10n.localize("less")})</#if></td>
         <#if (timePeriodIdList?size > 1)>
-            <td class="text-right">${ec.l10n.formatCurrency(classInfo.postedNoClosingByTimePeriod['ALL']!0, currencyUomId)}</td>
+            <#assign classPerAmount = (classInfo.postedNoClosingByTimePeriod['ALL']!0)*negMult>
+            <td class="text-right text-mono">${ec.l10n.format(classPerAmount, currencyFormat)}<#if (classPerAmount >= 0)>&nbsp;</#if></td>
         </#if>
         <#list timePeriodIdList as timePeriodId>
-            <td class="text-right">${ec.l10n.formatCurrency(classInfo.postedNoClosingByTimePeriod[timePeriodId]!0, currencyUomId)}</td>
+            <#assign classPerAmount = (classInfo.postedNoClosingByTimePeriod[timePeriodId]!0)*negMult>
+            <td class="text-right text-mono"><#if classPerAmount != 0>${ec.l10n.format(classPerAmount, currencyFormat)}<#if (classPerAmount >= 0)>&nbsp;</#if><#else>&nbsp;</#if></td>
+            <#if showPercents>
+                <#assign netRevenueAmt = (classInfoById.REVENUE.totalPostedNoClosingByTimePeriod[timePeriodId]!0)>
+                <td class="text-right text-mono"><#if classPerAmount != 0 && netRevenueAmt != 0>${ec.l10n.format(classPerAmount/netRevenueAmt, percentFormat)}<#else>&nbsp;</#if></td>
+            </#if>
         </#list>
         <#if showDiff>
-            <td class="text-right">${ec.l10n.formatCurrency((classInfo.postedNoClosingByTimePeriod[timePeriodIdList[1]]!0) - (classInfo.postedNoClosingByTimePeriod[timePeriodIdList[0]]!0), currencyUomId)}</td>
+            <#assign diffAmount = ((classInfo.postedNoClosingByTimePeriod[timePeriodIdList[1]]!0) - (classInfo.postedNoClosingByTimePeriod[timePeriodIdList[0]]!0))*negMult>
+            <td class="text-right text-mono">${ec.l10n.format(diffAmount, currencyFormat)}<#if (diffAmount >= 0)>&nbsp;</#if></td>
         </#if>
     </tr>
     <#list classInfo.glAccountInfoList! as glAccountInfo>
-        <#if showDetail>
+        <#assign glAccountAllAmt = (glAccountInfo.postedNoClosingByTimePeriod['ALL']!0)*negMult>
+        <#if showDetail && glAccountAllAmt != 0>
             <tr>
-                <td style="padding-left: ${(depth-1) * 2 + 3}.3em;"><#if accountCodeFormatter??>${accountCodeFormatter.valueToString(glAccountInfo.accountCode)}<#else>${glAccountInfo.accountCode}</#if>: ${glAccountInfo.accountName}</td>
+                <td style="padding-left: ${(depth-1) * indentMult + (indentMult * 1.5) + 0.3}em;"><#if accountCodeFormatter??>${accountCodeFormatter.valueToString(glAccountInfo.accountCode)}<#else>${glAccountInfo.accountCode}</#if>: ${glAccountInfo.accountName}</td>
                 <#if (timePeriodIdList?size > 1)>
-                    <td class="text-right">${ec.l10n.formatCurrency(glAccountInfo.postedNoClosingByTimePeriod['ALL']!0, currencyUomId)}</td>
+                    <td class="text-right text-mono">${ec.l10n.format(glAccountAllAmt, currencyFormat)}<#if (glAccountAllAmt >= 0)>&nbsp;</#if></td>
                 </#if>
                 <#list timePeriodIdList as timePeriodId>
-                    <td class="text-right">
-                        <#if findEntryUrl??>
-                            <#assign findEntryInstance = findEntryUrl.getInstance(sri, true).addParameter("glAccountId", glAccountInfo.glAccountId).addParameter("isPosted", "Y").addParameter("timePeriodId", timePeriodId)>
-                            <a href="${findEntryInstance.getUrlWithParams()}">${ec.l10n.formatCurrency(glAccountInfo.postedNoClosingByTimePeriod[timePeriodId]!0, currencyUomId)}</a>
+                    <#assign currentAmt = (glAccountInfo.postedNoClosingByTimePeriod[timePeriodId]!0)*negMult>
+                    <#if findEntryUrl??>
+                        <#assign findEntryInstance = findEntryUrl.getInstance(sri, true).addParameter("glAccountId", glAccountInfo.glAccountId).addParameter("isPosted", "Y").addParameter("timePeriodId", timePeriodId)>
+                        <#if sri.getRenderMode()! == "vuet">
+                            <td class="text-right text-mono"><m-link href="${findEntryInstance.getPathWithParams()}">${ec.l10n.format(currentAmt, currencyFormat)}</m-link><#if (currentAmt >= 0)>&nbsp;</#if></td>
                         <#else>
-                            ${ec.l10n.formatCurrency(glAccountInfo.postedNoClosingByTimePeriod[timePeriodId]!0, currencyUomId)}
+                            <td class="text-right text-mono"><a href="${findEntryInstance.getUrlWithParams()}">${ec.l10n.format(currentAmt, currencyFormat)}</a><#if (currentAmt >= 0)>&nbsp;</#if></td>
                         </#if>
-                    </td>
+                    <#else>
+                        <td class="text-right text-mono">${ec.l10n.format(currentAmt, currencyFormat)}<#if (currentAmt >= 0)>&nbsp;</#if></td>
+                    </#if>
+                    <#if showPercents>
+                        <#assign netRevenueAmt = (classInfoById.REVENUE.totalPostedNoClosingByTimePeriod[timePeriodId]!0)>
+                        <td class="text-right text-mono"><#if netRevenueAmt != 0>${ec.l10n.format(currentAmt/netRevenueAmt, percentFormat)}</#if></td>
+                    </#if>
                 </#list>
                 <#if showDiff>
-                    <td class="text-right">${ec.l10n.formatCurrency((glAccountInfo.postedNoClosingByTimePeriod[timePeriodIdList[1]]!0) - (glAccountInfo.postedNoClosingByTimePeriod[timePeriodIdList[0]]!0), currencyUomId)}</td>
+                    <#assign diffAmount = ((glAccountInfo.postedNoClosingByTimePeriod[timePeriodIdList[1]]!0) - (glAccountInfo.postedNoClosingByTimePeriod[timePeriodIdList[0]]!0))*negMult>
+                    <td class="text-right text-mono">${ec.l10n.format(diffAmount, currencyFormat)}<#if (diffAmount >= 0)>&nbsp;</#if></td>
                 </#if>
             </tr>
         <#else>
@@ -62,19 +83,26 @@ along with this software (see the LICENSE.md file). If not, see
         </#if>
     </#list>
     <#list classInfo.childClassInfoList as childClassInfo>
-        <@showClass childClassInfo depth + 1/>
+        <@showClass childClassInfo depth+1 showLess/>
     </#list>
     <#if classInfo.childClassInfoList?has_content>
         <tr<#if depth == 1> class="text-info"</#if>>
-            <td style="padding-left: ${(depth-1) * 2}.3em;"><strong>${ec.l10n.localize(classInfo.className + " Total")}</strong></td>
+            <td style="padding-left: ${((depth-1) * indentMult) + 0.3}em;"><strong>${ec.l10n.localize("Total " + classInfo.className)}</strong><#if showLess && depth == 1> (${ec.l10n.localize("less")})</#if></td>
             <#if (timePeriodIdList?size > 1)>
-                <td class="text-right"><strong>${ec.l10n.formatCurrency(classInfo.totalPostedNoClosingByTimePeriod['ALL']!0, currencyUomId)}</strong></td>
+                <td class="text-right text-mono"><strong>
+                    ${ec.l10n.format((classInfo.totalPostedNoClosingByTimePeriod['ALL']!0)*negMult, currencyFormat)}</strong></td>
             </#if>
             <#list timePeriodIdList as timePeriodId>
-                <td class="text-right"><strong>${ec.l10n.formatCurrency(classInfo.totalPostedNoClosingByTimePeriod[timePeriodId]!0, currencyUomId)}</strong></td>
+                <#assign currentAmt = (classInfo.totalPostedNoClosingByTimePeriod[timePeriodId]!0)*negMult>
+                <td class="text-right text-mono"><strong>${ec.l10n.format(currentAmt, currencyFormat)}<#if (currentAmt >= 0)>&nbsp;</#if></strong></td>
+                <#if showPercents>
+                    <#assign netRevenueAmt = (classInfoById.REVENUE.totalPostedNoClosingByTimePeriod[timePeriodId]!0)>
+                    <td class="text-right text-mono"><#if netRevenueAmt != 0>${ec.l10n.format(currentAmt/netRevenueAmt, percentFormat)}</#if></td>
+                </#if>
             </#list>
             <#if showDiff>
-                <td class="text-right"><strong>${ec.l10n.formatCurrency((classInfo.totalPostedNoClosingByTimePeriod[timePeriodIdList[1]]!0) - (classInfo.totalPostedNoClosingByTimePeriod[timePeriodIdList[0]]!0), currencyUomId)}</strong></td>
+                <#assign diffAmount = ((classInfo.totalPostedNoClosingByTimePeriod[timePeriodIdList[1]]!0) - (classInfo.totalPostedNoClosingByTimePeriod[timePeriodIdList[0]]!0))*negMult>
+                <td class="text-right text-mono"><strong>${ec.l10n.format(diffAmount, currencyFormat)}</strong><#if (diffAmount >= 0)>&nbsp;</#if></td>
             </#if>
         </tr>
     </#if>
@@ -83,82 +111,106 @@ along with this software (see the LICENSE.md file). If not, see
 <table class="table table-striped table-hover table-condensed">
     <thead>
         <tr>
-            <th>${ec.l10n.localize("Income Statement")}</th>
-            <#if (timePeriodIdList?size > 1)>
-                <th class="text-right">${ec.l10n.localize("All Periods")}</th>
-            </#if>
+            <th>${organizationName!""} - ${ec.l10n.localize("Income Statement")} <small>(${ec.l10n.format(ec.user.nowTimestamp, 'dd MMM yyyy HH:mm')})</small></th>
+            <#if (timePeriodIdList?size > 1)><th class="text-right">${ec.l10n.localize("All Periods")}</th></#if>
             <#list timePeriodIdList as timePeriodId>
-                <th class="text-right">${timePeriodIdMap[timePeriodId].periodName} (Closed: ${timePeriodIdMap[timePeriodId].isClosed})</th>
+                <th class="text-right">${timePeriodIdMap[timePeriodId].periodName}</th>
+                <#if showPercents><th class="text-right">${ec.l10n.localize("% of Revenue")}</th></#if>
             </#list>
-            <#if showDiff>
-                <th class="text-right">${ec.l10n.localize("Difference")}</th>
-            </#if>
+            <#if showDiff><th class="text-right">${ec.l10n.localize("Difference")}</th></#if>
         </tr>
     </thead>
     <tbody>
 
         <@showClass classInfoById.REVENUE 1/>
-        <@showClass classInfoById.CONTRA_REVENUE 1/>
-        <tr class="text-info">
-            <td><strong>${ec.l10n.localize("Net Revenue")}</strong> (${ec.l10n.localize("Revenue")} + ${ec.l10n.localize("Contra Revenue")})</td>
+        <@showClass classInfoById.COST_OF_SALES 1 true/>
+        <tr class="text-success" style="border-bottom: solid black;">
+            <td><strong>${ec.l10n.localize("Gross Profit On Sales")}</strong> (${ec.l10n.localize("Net Revenue")} - ${ec.l10n.localize("Cost of Sales")})</td>
             <#if (timePeriodIdList?size > 1)>
-                <td class="text-right"><strong>${ec.l10n.formatCurrency((classInfoById.REVENUE.totalPostedNoClosingByTimePeriod['ALL']!0) + (classInfoById.CONTRA_REVENUE.totalPostedNoClosingByTimePeriod['ALL']!0), currencyUomId)}</strong></td>
+                <#assign currentAmt = grossProfitOnSalesMap['ALL']!0>
+                <td class="text-right text-mono"><strong>${ec.l10n.format(currentAmt, currencyFormat)}</strong><#if (currentAmt >= 0)>&nbsp;</#if></td>
             </#if>
             <#list timePeriodIdList as timePeriodId>
-                <td class="text-right"><strong>${ec.l10n.formatCurrency((classInfoById.REVENUE.totalPostedNoClosingByTimePeriod[timePeriodId]!0) + (classInfoById.CONTRA_REVENUE.totalPostedNoClosingByTimePeriod[timePeriodId]!0), currencyUomId)}</strong></td>
+                <#assign currentAmt = grossProfitOnSalesMap[timePeriodId]!0>
+                <td class="text-right text-mono"><strong>${ec.l10n.format(currentAmt, currencyFormat)}</strong><#if (currentAmt >= 0)>&nbsp;</#if></td>
+                <#if showPercents>
+                    <#assign netRevenueAmt = (classInfoById.REVENUE.totalPostedNoClosingByTimePeriod[timePeriodId]!0)>
+                    <td class="text-right text-mono"><#if netRevenueAmt != 0>${ec.l10n.format(currentAmt/netRevenueAmt, percentFormat)}</#if></td>
+                </#if>
             </#list>
             <#if showDiff>
-                <td class="text-right"><strong>${ec.l10n.formatCurrency((classInfoById.REVENUE.totalPostedNoClosingByTimePeriod[timePeriodIdList[1]]!0) + (classInfoById.CONTRA_REVENUE.totalPostedNoClosingByTimePeriod[timePeriodIdList[1]]!0) - (classInfoById.REVENUE.totalPostedNoClosingByTimePeriod[timePeriodIdList[0]]!0) - (classInfoById.CONTRA_REVENUE.totalPostedNoClosingByTimePeriod[timePeriodIdList[0]]!0), currencyUomId)}</strong></td>
+                <#assign diffAmount = (grossProfitOnSalesMap[timePeriodIdList[1]]!0) - (grossProfitOnSalesMap[timePeriodIdList[0]]!0)>
+                <td class="text-right text-mono"><strong>${ec.l10n.format(diffAmount, currencyFormat)}</strong><#if (diffAmount >= 0)>&nbsp;</#if></td>
             </#if>
         </tr>
 
-        <@showClass classInfoById.COST_OF_SALES 1/>
+        <@showClass classInfoById.EXPENSE 1 true/>
         <tr class="text-success" style="border-bottom: solid black;">
-            <td><strong>${ec.l10n.localize("Gross Profit On Sales")}</strong> (${ec.l10n.localize("Net Revenue")} + ${ec.l10n.localize("Cost of Sales")})</td>
+            <td><strong>${ec.l10n.localize("Net Operating Income")}</strong></td>
             <#if (timePeriodIdList?size > 1)>
-                <td class="text-right"><strong>${ec.l10n.formatCurrency(grossProfitOnSalesMap['ALL']!0, currencyUomId)}</strong></td>
+                <#assign currentAmt = netOperatingIncomeMap['ALL']!0>
+                <td class="text-right text-mono"><strong>${ec.l10n.format(currentAmt, currencyFormat)}</strong><#if (currentAmt >= 0)>&nbsp;</#if></td>
             </#if>
             <#list timePeriodIdList as timePeriodId>
-                <td class="text-right"><strong>${ec.l10n.formatCurrency(grossProfitOnSalesMap[timePeriodId]!0, currencyUomId)}</strong></td>
+                <#assign currentAmt = netOperatingIncomeMap[timePeriodId]!0>
+                <td class="text-right text-mono"><strong>${ec.l10n.format(currentAmt, currencyFormat)}</strong><#if (currentAmt >= 0)>&nbsp;</#if></td>
+                <#if showPercents>
+                    <#assign netRevenueAmt = (classInfoById.REVENUE.totalPostedNoClosingByTimePeriod[timePeriodId]!0)>
+                    <td class="text-right text-mono"><#if netRevenueAmt != 0>${ec.l10n.format(currentAmt/netRevenueAmt, percentFormat)}</#if></td>
+                </#if>
             </#list>
             <#if showDiff>
-                <td class="text-right"><strong>${ec.l10n.formatCurrency((grossProfitOnSalesMap[timePeriodIdList[1]]!0) - (grossProfitOnSalesMap[timePeriodIdList[0]]!0), currencyUomId)}</strong></td>
+                <#assign diffAmount = (netOperatingIncomeMap[timePeriodIdList[1]]!0) - (netOperatingIncomeMap[timePeriodIdList[0]]!0)>
+                <td class="text-right text-mono"><strong>${ec.l10n.format(diffAmount, currencyFormat)}</strong><#if (diffAmount >= 0)>&nbsp;</#if></td>
             </#if>
         </tr>
 
         <@showClass classInfoById.INCOME 1/>
-        <@showClass classInfoById.EXPENSE 1/>
+        <@showClass classInfoById.NON_OP_EXPENSE 1 true/>
         <tr class="text-success" style="border-bottom: solid black;">
-            <td><strong>${ec.l10n.localize("Net Operating Income")}</strong></td>
+            <td><strong>${ec.l10n.localize("Net Non-operating Income")}</strong></td>
             <#if (timePeriodIdList?size > 1)>
-                <td class="text-right"><strong>${ec.l10n.formatCurrency(netOperatingIncomeMap['ALL']!0, currencyUomId)}</strong></td>
+                <#assign currentAmt = netNonOperatingIncomeMap['ALL']!0>
+                <td class="text-right text-mono"><strong>${ec.l10n.format(currentAmt, currencyFormat)}</strong><#if (currentAmt >= 0)>&nbsp;</#if></td>
             </#if>
             <#list timePeriodIdList as timePeriodId>
-                <td class="text-right"><strong>${ec.l10n.formatCurrency(netOperatingIncomeMap[timePeriodId]!0, currencyUomId)}</strong></td>
+                <#assign currentAmt = netNonOperatingIncomeMap[timePeriodId]!0>
+                <td class="text-right text-mono"><strong>${ec.l10n.format(currentAmt, currencyFormat)}</strong><#if (currentAmt >= 0)>&nbsp;</#if></td>
+                <#if showPercents>
+                    <#assign netRevenueAmt = (classInfoById.REVENUE.totalPostedNoClosingByTimePeriod[timePeriodId]!0)>
+                    <td class="text-right text-mono"><#if netRevenueAmt != 0>${ec.l10n.format(currentAmt/netRevenueAmt, percentFormat)}</#if></td>
+                </#if>
             </#list>
             <#if showDiff>
-                <td class="text-right"><strong>${ec.l10n.formatCurrency((netOperatingIncomeMap[timePeriodIdList[1]]!0) - (netOperatingIncomeMap[timePeriodIdList[0]]!0), currencyUomId)}</strong></td>
+                <#assign diffAmount = (netNonOperatingIncomeMap[timePeriodIdList[1]]!0) - (netNonOperatingIncomeMap[timePeriodIdList[0]]!0)>
+                <td class="text-right text-mono"><strong>${ec.l10n.format(diffAmount, currencyFormat)}</strong><#if (diffAmount >= 0)>&nbsp;</#if></td>
             </#if>
         </tr>
 
-        <@showClass classInfoById.NON_OP_EXPENSE 1/>
         <tr class="text-success" style="border-bottom: solid black;">
             <td><strong>${ec.l10n.localize("Net Income")}</strong></td>
             <#if (timePeriodIdList?size > 1)>
-                <td class="text-right"><strong>${ec.l10n.formatCurrency(netIncomeMap['ALL']!0, currencyUomId)}</strong></td>
+                <#assign currentAmt = netIncomeMap['ALL']!0>
+                <td class="text-right text-mono"><strong>${ec.l10n.format(currentAmt, currencyFormat)}</strong><#if (currentAmt >= 0)>&nbsp;</#if></td>
             </#if>
             <#list timePeriodIdList as timePeriodId>
-                <td class="text-right"><strong>${ec.l10n.formatCurrency(netIncomeMap[timePeriodId]!0, currencyUomId)}</strong></td>
+                <#assign currentAmt = netIncomeMap[timePeriodId]!0>
+                <td class="text-right text-mono"><strong>${ec.l10n.format(currentAmt, currencyFormat)}</strong><#if (currentAmt >= 0)>&nbsp;</#if></td>
+                <#if showPercents>
+                    <#assign netRevenueAmt = (classInfoById.REVENUE.totalPostedNoClosingByTimePeriod[timePeriodId]!0)>
+                    <td class="text-right text-mono"><#if netRevenueAmt != 0>${ec.l10n.format(currentAmt/netRevenueAmt, percentFormat)}</#if></td>
+                </#if>
             </#list>
             <#if showDiff>
-                <td class="text-right"><strong>${ec.l10n.formatCurrency((netIncomeMap[timePeriodIdList[1]]!0) - (netIncomeMap[timePeriodIdList[0]]!0), currencyUomId)}</strong></td>
+                <#assign diffAmount = (netIncomeMap[timePeriodIdList[1]]!0) - (netIncomeMap[timePeriodIdList[0]]!0)>
+                <td class="text-right text-mono"><strong>${ec.l10n.format(diffAmount, currencyFormat)}</strong><#if (diffAmount >= 0)>&nbsp;</#if></td>
             </#if>
         </tr>
     </tbody>
 </table>
 
 <#if showCharts>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.6.0/Chart.min.js" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js" type="text/javascript"></script>
     <ul class="float-plain" style="margin-top:12px;">
     <#if (timePeriodIdList?size > 1) && topExpenseByTimePeriod['ALL']?has_content>
         <#assign topExpenseList = topExpenseByTimePeriod['ALL']>

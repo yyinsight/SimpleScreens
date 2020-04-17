@@ -62,8 +62,8 @@ along with this software (see the LICENSE.md file). If not, see
         <parameter name="roleTypeId"/>
         <parameter name="indexName"/>
         <parameter name="documentType"/>
+        <parameter name="partyTypeEnumId"/>
         <parameter name="includeDisabled"/> <!-- 'true' includes disabled -->
-        <parameter name="activeOrgId"/>
         <parameter name="restrictActiveOrg"/> <!-- !'true' restricts to active org (only if present) -->
         <parameter name="pageIndex"/>
         <actions>
@@ -83,14 +83,27 @@ along with this software (see the LICENSE.md file). If not, see
                     ec.web.sendJsonResponse(outList)
                 </script>
             </then><else>
+                <!-- if we have activeOrgId or filterOrgIds see if user has active org or user org filters -->
+                <set field="activeOrgId" from="ec.user.context?.activeOrgId"/>
+                <set field="filterOrgIds" from="ec.user.context?.filterOrgIds"/>
+                <set field="findFilters" from="ec.artifactExecution.getFindFiltersForUser('mantle.party.Party')"/>
+                <if condition="findFilters"><set field="entityFilterSetId" from="findFilters[0].entityFilterSetId"/></if>
+                <!-- <log level="warn" message="Doing party search with activeOrgId ${activeOrgId} filterOrgIds ${filterOrgIds} entityFilterSetId ${entityFilterSetId}"/> -->
+
                 <script><![CDATA[
                     StringBuilder termSb = new StringBuilder('(')
-                    if (term.contains('*')) termSb.append(term)
-                    else term.split(' ').each({ termSb.append(it).append('* ') })
-                    termSb.append(')')
-                    if (roleTypeId) termSb.append(' AND roles.roleTypeId:(').append(roleTypeId.replaceAll(/,/, ' ')).append(')')
-                    if (!'true'.equals(includeDisabled)) {termSb.append(' AND (NOT disabled:Y)')}
-                    if (activeOrgId && 'true'.equals(restrictActiveOrg)) {termSb.append(' AND (partyId:' + activeOrgId + ')')}
+                    termSb.append(elasticQueryAutoWildcard(term, false)).append(')')
+
+                    if (roleTypeId) termSb.append(' AND roles.roleTypeId:(').append(roleTypeId.replaceAll(/,/, ' OR ')).append(')')
+                    if (partyTypeEnumId) termSb.append(' AND (partyTypeEnumId:' + partyTypeEnumId + ')')
+                    if (!'true'.equals(includeDisabled)) termSb.append(' AND (NOT disabled:Y)')
+                    if (activeOrgId && 'true'.equals(restrictActiveOrg)) termSb.append(' AND (partyId:' + activeOrgId + ')')
+
+                    if ('MANTLE_USER_ORG'.equals(entityFilterSetId)) {
+                        termSb.append(' AND ownerPartyId:(' + (filterOrgIds ? filterOrgIds.join(' OR ') + ' OR ' : '') + '_NA_)')
+                    } else if ('MANTLE_ACTIVE_ORG'.equals(entityFilterSetId) && activeOrgId) {
+                        termSb.append(' AND ownerPartyId:(' + activeOrgId + ' OR _NA_)')
+                    }
                 ]]></script>
                 <!-- <log level="warn" message="Doing party search with queryString [${termSb.toString()}], indexName:${indexName}, documentType:${documentType}"/> -->
                 <service-call name="org.moqui.search.SearchServices.search#DataDocuments" out-map="context"
@@ -126,12 +139,13 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- example code for ContactInfo form -->
         <!-- see the SimpleScreens/Party/EditParty/UpdateContactInfo.xml screen, or reuse it with a subscreens.subscreens-item element -->
         <!-- an example of a call to get#PartyContactInfo to populate the form, plus a call to flatten the Map for simple use in the form -->
-        <if condition="postalContactMechId || telecomContactMechId || emailContactMechId"><then>
+        <if condition="postalContactMechId || telecomContactMechId || emailContactMechId || otherContactMechId"><then>
             <service-call name="mantle.party.ContactServices.get#PartyContactInfo" out-map="contactInfo" in-map="context"/>
             <set field="contactInfoFlat" from="contactInfo + flattenNestedMap(contactInfo)"/>
-        </then><else-if condition="postalContactMechPurposeId || telecomContactMechPurposeId || emailContactMechPurposeId">
+        </then><else-if condition="postalContactMechPurposeId || telecomContactMechPurposeId || emailContactMechPurposeId || otherContactMechPurposeId">
             <set field="contactInfoFlat" from="[postalContactMechPurposeId:postalContactMechPurposeId,
-                    telecomContactMechPurposeId:telecomContactMechPurposeId, emailContactMechPurposeId:emailContactMechPurposeId]"/>
+                    telecomContactMechPurposeId:telecomContactMechPurposeId, emailContactMechPurposeId:emailContactMechPurposeId,
+                    otherContactMechPurposeId:otherContactMechPurposeId]"/>
         </else-if><else>
             <set field="contactInfoFlat" from="[:]"/>
         </else></if>
@@ -347,6 +361,30 @@ along with this software (see the LICENSE.md file). If not, see
                 <default-field><ignored/></default-field>
             </field>
 
+            <field name="webContactMechId">
+                <conditional-field condition="webContactMechPurposeId"><hidden/></conditional-field>
+                <default-field><ignored/></default-field>
+            </field>
+            <field name="webContactMechPurposeId">
+                <conditional-field condition="webContactMechPurposeId"><hidden/></conditional-field>
+                <conditional-field condition="createWeb" title="Web URL Purpose">
+                    <drop-down no-current-selected-key="WebUrlPrimary">
+                        <entity-options key="${contactMechPurposeId}" text="${description}">
+                            <entity-find entity-name="mantle.party.contact.ContactMechPurpose">
+                                <econdition field-name="contactMechTypeEnumId" value="CmtWebAddress"/>
+                                <order-by field-name="description"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </conditional-field>
+                <default-field><ignored/></default-field>
+            </field>
+            <field name="webAddress">
+                <conditional-field condition="createWeb || webContactMechPurposeId || webContactMechId" title="Web URL">
+                    <text-line size="40"/></conditional-field>
+                <default-field><ignored/></default-field>
+            </field>
+
             <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
 
             <field-layout>
@@ -381,6 +419,7 @@ along with this software (see the LICENSE.md file). If not, see
             <field name="paymentMethodTypeEnumId"><default-field><hidden/></default-field></field>
 
             <!-- PaymentMethod fields -->
+            <field name="description"><default-field><text-line size="60"/></default-field></field>
             <field name="firstNameOnAccount"><default-field title=""><text-line size="25"/></default-field></field>
             <field name="lastNameOnAccount"><default-field title=""><text-line size="25"/></default-field></field>
             <field name="companyNameOnAccount"><default-field><text-line size="60"/></default-field></field>
@@ -412,7 +451,10 @@ along with this software (see the LICENSE.md file). If not, see
                 <default-field><ignored/></default-field>
             </field>
             <field name="cardNumber">
-                <conditional-field title="" condition="isCreditCard &amp;&amp; (!paymentMethodId || ec.user.hasPermission('CARD_NUMBER_EDIT'))" tooltip="Card Number">
+                <conditional-field title="" condition="isCreditCard &amp;&amp; !paymentMethodId" tooltip="Card Number">
+                    <text-line size="16"/></conditional-field>
+                <conditional-field title="" condition="isCreditCard &amp;&amp; paymentMethodId &amp;&amp; ec.user.hasPermission('CARD_NUMBER_EDIT')"
+                        tooltip="Card Number (clear this field to update other fields without the full Card Number)">
                     <text-line size="16"/></conditional-field>
                 <conditional-field title="" condition="isCreditCard">
                     <display text="${maskedCardNumber?:''}" also-hidden="false"/></conditional-field>
@@ -500,6 +542,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <submit/></default-field></field>
 
             <field-layout>
+                <field-ref name="description"/>
                 <field-row-big title="Name On Account"><field-ref name="firstNameOnAccount"/>
                     <field-ref name="lastNameOnAccount"/></field-row-big>
                 <field-ref name="companyNameOnAccount"/>

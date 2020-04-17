@@ -17,11 +17,24 @@ along with this software (see the LICENSE.md file). If not, see
 
     <parameter name="invoiceId" required="true"/>
 
+    <transition name="editPayment"><default-response url="../../Payment/EditPayment"/></transition>
+    <transition name="editTransaction"><default-response url="../../Transaction/EditTransaction"/></transition>
+    <transition name="editTimePeriod"><default-response url="../../TimePeriod/EditTimePeriod"/></transition>
+
+    <transition name="editParty"><default-response url="//${appRoot}/Party/EditParty"/></transition>
+    <transition name="orderDetail"><default-response url="//${appRoot}/Order/OrderDetail"/></transition>
+    <transition name="shipmentDetail"><default-response url="//${appRoot}/Shipment/ShipmentDetail"/></transition>
+    <transition name="editReturn"><default-response url="//${appRoot}/Return/EditReturn"/></transition>
+
     <transition name="updateInvoice"><service-call name="mantle.account.InvoiceServices.update#Invoice"/>
         <default-response url="."/></transition>
     <transition name="updateInvoiceClosed"><service-call name="mantle.account.InvoiceServices.update#InvoiceClosed"/>
         <default-response url="."/></transition>
     <transition name="updateStatus"><service-call name="update#mantle.account.invoice.Invoice"/><default-response url="."/></transition>
+    <transition name="reverseInvoice"><service-call name="mantle.account.InvoiceServices.reverse#Invoice"/>
+        <default-response url="."/></transition>
+    <transition name="cancelInvoiceAndPayments"><service-call name="mantle.account.InvoiceServices.cancel#InvoiceAndPayments"/>
+        <default-response url="."/></transition>
 
     <transition name="adjustInvoice"><service-call name="mantle.account.InvoiceServices.adjust#Invoice"/>
         <default-response url="."/></transition>
@@ -29,12 +42,16 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/></transition>
     <transition name="repostInvoice"><service-call name="mantle.ledger.InvoiceAutoPostServices.repost#Invoice"/>
         <default-response url="."/></transition>
+    <!-- NOTE: needs a more generic interface to avoid dependency on mantle-edi and to support other SystemRemotes:
+    <transition name="produceEdiInvoice"><service-call name="mantle.edi.account.X12InvoiceServices.produce#Invoice"/><default-response url="."/></transition> -->
 
     <transition-include name="getProductList" location="component://SimpleScreens/template/product/ProductTransitions.xml"/>
     <transition-include name="getGlAccountListPaginated" location="component://SimpleScreens/template/account/AccountTransitions.xml"/>
     <transition-include name="getItemTypeGlAccount" location="component://SimpleScreens/template/account/AccountTransitions.xml"/>
 
-    <transition name="editPayment"><default-response url="../../Payment/EditPayment"/></transition>
+    <transition name="createCreditMemo"><service-call name="mantle.account.InvoiceServices.create#InvoiceCreditMemo"/>
+        <default-response url="."/></transition>
+
     <transition name="recordPayment"><service-call name="mantle.account.PaymentServices.create#InvoicePayment"/>
         <default-response url="."/></transition>
     <transition name="sendPromisedPayment"><service-call name="mantle.account.PaymentServices.send#PromisedPayment"/>
@@ -48,15 +65,10 @@ along with this software (see the LICENSE.md file). If not, see
 
     <transition name="sendInvoiceStoreEmail"><service-call name="mantle.account.InvoiceServices.send#InvoiceStoreEmail"/>
         <default-response url="."/></transition>
+    <transition name="sendCustomerPastDueEmail"><service-call name="mantle.account.InvoiceServices.send#CustomerPastDueEmail"/>
+        <default-response url="."/></transition>
     <transition name="sendEmailMessage"><service-call name="org.moqui.impl.EmailServices.send#EmailMessage"/>
         <default-response url="."/></transition>
-
-    <transition name="editTransaction"><default-response url="../../Transaction/EditTransaction"/></transition>
-    <transition name="editTimePeriod"><default-response url="../../TimePeriod/EditTimePeriod"/></transition>
-
-    <transition name="editParty"><default-response url="//${appRoot}/Party/EditParty"/></transition>
-    <transition name="orderDetail"><default-response url="//${appRoot}/Order/OrderDetail"/></transition>
-    <transition name="shipmentDetail"><default-response url="//${appRoot}/Shipment/ShipmentDetail"/></transition>
 
     <transition name="createContent"><service-call name="mantle.account.InvoiceServices.create#InvoiceContent"/>
         <default-response url="."/></transition>
@@ -83,15 +95,21 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- set statusId for StatusChangeSection -->
         <set field="statusId" from="invoice?.statusId"/>
 
-        <entity-find entity-name="mantle.party.PartyRole" list="fromOrgInternalList">
-            <econdition field-name="partyId" from="invoice.fromPartyId"/><econdition field-name="roleTypeId" value="OrgInternal"/></entity-find>
-        <set field="isFromPartyOrgInternal" from="fromOrgInternalList as boolean"/>
-        <set field="organizationPartyId" from="isFromPartyOrgInternal ? invoice.fromPartyId : invoice.toPartyId"/>
+        <entity-find-one entity-name="mantle.party.PartyDetail" value-field="organizationParty">
+            <field-map field-name="partyId" from="organizationPartyId"/></entity-find-one>
+
+        <!-- find associated system messages (EDI, etc) -->
+        <entity-find entity-name="moqui.service.message.SystemMessage" list="outSystemMessageList">
+            <econdition field-name="invoiceId"/><econdition field-name="isOutgoing" value="Y"/>
+            <econdition field-name="statusId" operator="not-equals" value="SmsgCancelled"/>
+        </entity-find>
+        <!-- don't require docType=IN, applicable for certain EDI SystemMessage records only:
+            <filter-map-list list="outSystemMessageList" to-list="inMessageList"><field-map field-name="docType" value="IN"/></filter-map-list> -->
     </actions>
     <widgets>
         <container-row><row-col lg="6">
             <container>
-                <section name="AdjustSection" condition="statusId in ['InvoiceFinalized', 'InvoiceSent', 'InvoiceApproved']"><widgets>
+                <section name="AdjustSection" condition="statusId in ['InvoiceFinalized', 'InvoiceSent', 'InvoiceAcked', 'InvoiceApproved']"><widgets>
                     <container-dialog id="AdjustDialog" button-text="Adjust Invoice">
                         <form-single name="AdjustInvoice" transition="adjustInvoice">
                             <field name="invoiceId"><default-field><hidden/></default-field></field>
@@ -119,7 +137,7 @@ along with this software (see the LICENSE.md file). If not, see
 
                             <field name="typeGlAccount"><default-field title="Default GL Account">
                                 <display dynamic-transition="getItemTypeGlAccount" also-hidden="false" depends-optional="true"
-                                        parameter-map="[organizationPartyId:organizationPartyId, direction:(isFromPartyOrgInternal ? 'O' : 'I')]">
+                                        parameter-map="[organizationPartyId:organizationPartyId, direction:(isPayableInvoice ? 'I' : 'O')]">
                                     <depends-on field="itemTypeEnumId"/><depends-on field="productId"/></display>
                             </default-field></field>
                             <field name="overrideGlAccountId"><default-field title="Override GL Account"><drop-down allow-empty="true">
@@ -140,6 +158,9 @@ along with this software (see the LICENSE.md file). If not, see
                 <section-iterate name="ShipmentLinks" list="shipmentIdSet" entry="shipmentId"><widgets>
                     <link url="shipmentDetail" text="Shipment ${shipmentId}" link-type="anchor-button"/>
                 </widgets></section-iterate>
+                <section-iterate name="ReturnLinks" list="returnIdSet" entry="returnId"><widgets>
+                    <link url="editReturn" text="Return ${returnId}" link-type="anchor-button"/>
+                </widgets></section-iterate>
                 <!-- replaced by tx list below:
                 <section-iterate name="AcctgTransLinks" list="acctgTransIdSet" entry="acctgTransId"><widgets>
                     <link url="editTransaction" text="TX ${acctgTransId}" link-type="anchor-button"/>
@@ -147,9 +168,37 @@ along with this software (see the LICENSE.md file). If not, see
                 -->
 
                 <link url="updateStatus" text="Uncancel" parameter-map="[invoiceId:invoiceId, statusId:'InvoiceInProcess']"
-                        condition="statusId == 'InvoiceCancelled' &amp;&amp; isFromPartyOrgInternal" confirmation="Go back to In Process status?"/>
+                        condition="statusId == 'InvoiceCancelled' &amp;&amp; !isPayableInvoice" confirmation="Go back to In Process status?"/>
                 <link url="updateStatus" text="Uncancel" parameter-map="[invoiceId:invoiceId, statusId:'InvoiceReceived']"
-                        condition="statusId == 'InvoiceCancelled' &amp;&amp; !isFromPartyOrgInternal" confirmation="Go back to Received status?"/>
+                        condition="statusId == 'InvoiceCancelled' &amp;&amp; isPayableInvoice" confirmation="Go back to Received status?"/>
+
+                <link url="cancelInvoiceAndPayments" text="Cancel Invoice and Payments" btn-type="warning"
+                        confirmation="Cancel this invoice and all payments applied to it?" condition="statusId != 'InvoiceCancelled'"/>
+
+                <link url="reverseInvoice" text="Reverse Invoice" btn-type="warning" condition="invoice.invoiceTotal &lt; 0.0"/>
+
+                <!-- see note above about more generic SystemRemote send transition:
+                <section name="SendEdiInvoiceSection" condition="!isPayableInvoice &amp;&amp; invoice.systemMessageRemoteId"><widgets>
+                    <link url="produceEdiInvoice" text="${inMessageList ? 'Resend' : 'Send'} EDI Invoice" parameter-map="[invoiceId:invoiceId]"/>
+                </widgets></section>
+                -->
+                <section name="OutMessageSection" condition="outSystemMessageList"><widgets>
+                    <container-dialog id="OutMessageDialog" button-text="Invoice Message History" width="800">
+                        <form-list name="OutSystemMessageList" list="outSystemMessageList" skip-form="true">
+                            <field name="systemMessageId"><default-field title="Message ID"><display/></default-field></field>
+                            <field name="systemMessageTypeId"><default-field title="Type">
+                                <display-entity entity-name="moqui.service.message.SystemMessageType"/></default-field></field>
+                            <field name="systemMessageRemoteId"><default-field title="Remote">
+                                <display-entity entity-name="moqui.service.message.SystemMessageRemote"/></default-field></field>
+                            <field name="statusId"><default-field title="Status">
+                                <display-entity entity-name="moqui.basic.StatusItem"/></default-field></field>
+                            <field name="initDate"><default-field><display/></default-field></field>
+                            <field name="docType"><default-field><display/></default-field></field>
+                            <field name="docSubType"><default-field><display/></default-field></field>
+                            <field name="ackMessageId"><default-field><display/></default-field></field>
+                        </form-list>
+                    </container-dialog>
+                </widgets></section>
 
                 <container-dialog id="AuditLogDialog" button-text="Audit Log" width="960">
                     <form-list name="AuditLogList" list="auditLogList" skip-form="true">
@@ -164,7 +213,7 @@ along with this software (see the LICENSE.md file). If not, see
 
                         <field name="changedDate"><default-field title="Date"><display/></default-field></field>
                         <field name="changedByUserId"><default-field title="User">
-                            <display-entity text="UsernameTemplate" entity-name="mantle.party.PersonWithUserAccount"/></default-field></field>
+                            <display-entity text="UsernameTemplate" entity-name="mantle.party.PersonWithUserAccount" key-field-name="userId"/></default-field></field>
                         <field name="pkSecondaryValue"><default-field title="Item"><display/></default-field></field>
                         <field name="changedFieldName"><default-field title="Field">
                             <display text="${org.moqui.util.StringUtilities.camelCaseToPretty(changedFieldName)}"/></default-field></field>
@@ -191,9 +240,19 @@ along with this software (see the LICENSE.md file). If not, see
                         <widget-template-include location="component://webroot/template/screen/BasicWidgetTemplates.xml#enumDropDown">
                             <set field="enumTypeId" value="InvoiceType"/></widget-template-include>
                     </conditional-field>
-                    <default-field title="Type">
-                        <display-entity entity-name="moqui.basic.Enumeration"/>
-                    </default-field>
+                    <default-field title="Type"><display-entity entity-name="moqui.basic.Enumeration"/></default-field>
+                </field>
+                <field name="productStoreId">
+                    <conditional-field title="Store" condition="invoiceEditable">
+                        <drop-down allow-empty="true"><entity-options key="${productStoreId}" text="${productStoreId}: ${storeName}">
+                            <entity-find entity-name="mantle.product.store.ProductStore">
+                                <order-by field-name="storeName"/></entity-find></entity-options>
+                        </drop-down>
+                    </conditional-field>
+                    <conditional-field title="Store" condition="invoice.productStoreId">
+                        <display-entity entity-name="mantle.product.store.ProductStore" text="${productStoreId}: ${storeName}"/>
+                    </conditional-field>
+                    <default-field><ignored/></default-field>
                 </field>
                 <field name="timePeriodId">
                     <conditional-field condition="invoice.timePeriodId" title="Time Period">
@@ -289,14 +348,26 @@ along with this software (see the LICENSE.md file). If not, see
 
             <section name="EmailMessageSection"><widgets>
                 <container-box><box-header title="Email Messages"/><box-toolbar>
-                    <section name="SendFinalizedEmailSection" condition="invoice.statusId in ['InvoiceFinalized', 'InvoiceSent', 'InvoiceAcked', 'InvoicePmtRecvd']"><actions>
+                    <section name="SendFinalizedEmailSection" condition="!isPayableInvoice &amp;&amp; invoice.statusId in ['InvoiceFinalized', 'InvoiceSent', 'InvoiceAcked', 'InvoicePmtRecvd']"><actions>
                         <if condition="invoice.toPartyId">
                             <service-call name="mantle.party.ContactServices.get#PartyContactInfo" out-map="emailInfo"
                                     in-map="[partyId:invoice.toPartyId, emailContactMechPurposeId:'EmailBilling', defaultToPrimaryPurpose:true]"/>
                             <set field="toAddresses" from="emailInfo.emailAddress"/>
                         </if>
                     </actions><widgets>
-                        <container-dialog id="SendFinalizedEmailDialog" button-text="Send Email">
+                        <container-dialog id="SendPastDueEmailDialog" button-text="Send Past Due Email">
+                            <form-single name="SendPastDueEmailForm" transition="sendCustomerPastDueEmail">
+                                <field name="invoiceId"><default-field><hidden/></default-field></field>
+                                <field name="fromPartyId" from="invoice.fromPartyId"><default-field><hidden/></default-field></field>
+                                <field name="toPartyId" from="invoice.toPartyId"><default-field><hidden/></default-field></field>
+                                <field name="toAddresses"><default-field title="To Address"><text-line size="40"/></default-field></field>
+                                <field name="daysPastDue"><default-field title="Days Past Due"><text-line size="4" default-value="7"/></default-field></field>
+                                <field name="daysPastInvoice"><default-field title="Days Past Invoice"><text-line size="4" default-value="40"/></default-field></field>
+                                <field name="daysLastEmail"><default-field title="Days Singe Last Past Due Email"><text-line size="4" default-value="2"/></default-field></field>
+                                <field name="submitButton"><default-field title="Send Email"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="SendFinalizedEmailDialog" button-text="Send Invoice Email">
                             <form-single name="SendFinalizedEmailForm" transition="sendInvoiceStoreEmail">
                                 <field name="invoiceId"><default-field><hidden/></default-field></field>
                                 <field name="emailTypeEnumId" from="'PsetInvoiceFinalized'"><default-field><hidden/></default-field></field>
@@ -329,17 +400,52 @@ along with this software (see the LICENSE.md file). If not, see
                 </box-body></container-box>
             </widgets></section>
         </row-col><row-col lg="6">
+            <label text="Payable Invoice ${invoiceId} for ${ec.resource.expand('PartyNameTemplate', null, organizationParty)}" condition="isPayableInvoice"/>
+            <label text="Receivable Invoice ${invoiceId} for ${ec.resource.expand('PartyNameTemplate', null, organizationParty)}" condition="!isPayableInvoice"/>
+
             <section-include name="StatusChangeSection" location="component://SimpleScreens/template/basic/StatusWidgets.xml"/>
             <section-include name="StatusHistorySection" location="component://SimpleScreens/template/basic/StatusWidgets.xml"/>
 
             <container-box><box-header title="Payment Applications"/><box-toolbar>
+                <container-dialog id="NewCreditMemoDialog" button-text="New Credit Memo" condition="unpaidTotal">
+                    <form-single name="NewCreditMemoForm" transition="createCreditMemo">
+                        <field name="originalInvoiceId" from="invoiceId"><default-field><display/></default-field></field>
+
+                        <field name="invoiceDate" from="ec.user.nowTimestamp"><default-field><date-time/></default-field></field>
+
+                        <field name="description"><default-field><text-line size="50"/></default-field></field>
+                        <field name="amount" from="unpaidTotal"><default-field><text-line size="8" format="#,##0.00"/></default-field></field>
+
+                        <field name="itemTypeEnumId"><default-field title="Item Type">
+                            <drop-down><entity-options key="${enumId}" text="${description}">
+                                <entity-find entity-name="moqui.basic.EnumAndGroup">
+                                    <econdition field-name="enumGroupEnumId" value="EngItemsAdjust"/>
+                                    <order-by field-name="description"/></entity-find>
+                            </entity-options></drop-down>
+                        </default-field></field>
+
+                        <field name="typeGlAccount"><default-field title="Default GL Account">
+                            <display dynamic-transition="getItemTypeGlAccount" also-hidden="false" depends-optional="true"
+                                    parameter-map="[organizationPartyId:organizationPartyId, direction:(isPayableInvoice ? 'I' : 'O')]">
+                                <depends-on field="itemTypeEnumId"/><depends-on field="productId"/></display>
+                        </default-field></field>
+                        <field name="overrideGlAccountId"><default-field title="Override GL Account"><drop-down allow-empty="true">
+                            <dynamic-options transition="getGlAccountListPaginated" server-search="true" min-length="0"/></drop-down></default-field></field>
+
+                        <field name="submitButton"><default-field title="Record Credit Memo"><submit/></default-field></field>
+                    </form-single>
+                </container-dialog>
+
                 <container-dialog id="RecordPaymentContainer" button-text="New Payment for Invoice" condition="unpaidTotal">
                     <form-single name="RecordPaymentForm" transition="recordPayment">
                         <field name="invoiceId"><default-field><display/></default-field></field>
                         <field name="statusId" from="paymentStatusId"><default-field title="Status">
-                            <widget-template-include location="component://webroot/template/screen/BasicWidgetTemplates.xml#statusDropDown">
-                                <set field="statusTypeId" value="Payment"/>
-                                <set field="noCurrentSelectedKey" value="PmntDelivered"/></widget-template-include>
+                            <drop-down no-current-selected-key="PmntPromised">
+                                <option key="PmntProposed" text="Proposed"/>
+                                <option key="PmntPromised" text="Promised"/>
+                                <option key="PmntAuthorized" text="Authorized"/>
+                                <option key="PmntDelivered" text="Delivered"/>
+                            </drop-down>
                         </default-field></field>
                         <field name="amountUomId" from="invoice.currencyUomId"><default-field title="Currency">
                             <display-entity entity-name="moqui.basic.Uom"/></default-field></field>
@@ -422,6 +528,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <link url="editPayment" text="${payment.paymentId?:''}" link-type="anchor"
                                   parameter-map="[paymentId:payment.paymentId]"/>
                         </default-field></field>
+                        <field name="effectiveDate" from="payment.effectiveDate"><default-field title="Date">
+                            <display format="yyyy-MM-dd"/></default-field></field>
                         <field name="statusId" from="payment.statusId"><default-field title="Status">
                             <display-entity entity-name="moqui.basic.StatusItem" also-hidden="false"/></default-field></field>
                         <field name="forThis"><default-field title="For This">
@@ -448,6 +556,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <link url="." text="${invoice.invoiceId?:''}" link-type="anchor"
                                     parameter-map="[invoiceId:invoice.invoiceId]"/>
                         </default-field></field>
+                        <field name="invoiceDate" from="invoice.invoiceDate"><default-field title="Date">
+                            <display format="yyyy-MM-dd"/></default-field></field>
                         <field name="statusId" from="invoice.statusId"><default-field title="Status">
                             <display-entity entity-name="moqui.basic.StatusItem" also-hidden="false"/></default-field></field>
                         <field name="invoiceTotal" align="right"><default-field title="Total">
