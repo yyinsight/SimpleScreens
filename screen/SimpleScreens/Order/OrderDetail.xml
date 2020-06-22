@@ -13,12 +13,29 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
-        default-menu-title="Order Detail" require-authentication="true">
+        default-menu-title="Order Detail" default-menu-index="1">
 
     <parameter name="orderId" required="true"/>
 
+    <transition name="editParty"><default-response url="//${appRoot}/Party/EditParty"/></transition>
+    <transition name="editSupplier"><default-response url="//${appRoot}/Supplier/EditSupplier"/></transition>
+    <transition name="editCustomer"><default-response url="//${appRoot}/Customer/EditCustomer"/></transition>
+
+    <transition name="editFacility"><default-response url="//${appRoot}/Facility/EditFacility"/></transition>
+    <transition name="editProduct"><default-response url="//${appRoot}/Product/EditProduct"/></transition>
+    <transition name="assetDetail"><default-response url="//${appRoot}/Asset/AssetDetail"/></transition>
+
+    <transition name="editInvoice"><default-response url="//${appRoot}/Accounting/Invoice/EditInvoice"/></transition>
+    <transition name="editPayment"><default-response url="//${appRoot}/Accounting/Payment/EditPayment"/></transition>
+    <transition name="editPaymentMethod"><default-response url="//${appRoot}/Party/PaymentMethod/EditPaymentMethod"/></transition>
+
+    <transition name="systemMessageDetail"><default-response url="//apps/system/SystemMessage/Message/SystemMessageDetail"/></transition>
+
     <transition name="updateOrderHeader"><service-call name="mantle.order.OrderServices.update#OrderHeader"/>
         <default-response url="."/></transition>
+    <transition name="updateOrderRecur"><service-call name="mantle.order.OrderServices.update#OrderRecur"/>
+        <default-response url="."/></transition>
+
     <transition name="requestOrder"><service-call name="mantle.order.OrderServices.update#OrderStatus" in-map="[orderId:orderId, orderPartSeqId:orderPartSeqId, statusId:'OrderRequested']"/>
         <default-response url="."/></transition>
     <transition name="proposeOrder"><service-call name="mantle.order.OrderServices.update#OrderStatus" in-map="[orderId:orderId, orderPartSeqId:orderPartSeqId, statusId:'OrderProposed']"/>
@@ -34,6 +51,7 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/></transition>
     <transition name="holdOrder"><service-call name="mantle.order.OrderServices.update#OrderStatus" in-map="[orderId:orderId, orderPartSeqId:orderPartSeqId, statusId:'OrderHold']"/>
         <default-response url="."/></transition>
+
     <transition name="completeOrderPart"><service-call name="mantle.order.OrderServices.complete#OrderPart"/>
         <default-response url="."/></transition>
     <transition name="cancelOrder"><service-call name="mantle.order.OrderServices.cancel#Order"/>
@@ -42,6 +60,7 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/></transition>
     <transition name="cancelOrderItem"><service-call name="mantle.order.OrderServices.cancel#OrderItem"/>
         <default-response url="."/></transition>
+
     <transition name="cloneOrder"><service-call name="mantle.order.OrderServices.clone#Order"/>
         <default-response url="."/></transition>
 
@@ -75,21 +94,10 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response type="none"/>
     </transition>
 
-    <transition name="editParty"><default-response url="//${appRoot}/Party/EditParty"/></transition>
-    <transition name="editSupplier"><default-response url="//${appRoot}/Supplier/EditSupplier"/></transition>
-    <transition name="editCustomer"><default-response url="//${appRoot}/Customer/EditCustomer"/></transition>
     <transition name="setOrderBillingShippingInfo"><service-call name="mantle.order.OrderServices.set#OrderBillingShippingInfo"/>
         <default-response url="."/></transition>
     <transition name="validateAddress"><service-call name="mantle.shipment.CarrierServices.validate#PostalAddress"/>
         <default-response url="."/></transition>
-
-    <transition name="editFacility"><default-response url="//${appRoot}/Facility/EditFacility"/></transition>
-    <transition name="editProduct"><default-response url="//${appRoot}/Product/EditProduct"/></transition>
-    <transition name="assetDetail"><default-response url="//${appRoot}/Asset/AssetDetail"/></transition>
-
-    <transition name="editInvoice"><default-response url="//${appRoot}/Accounting/Invoice/EditInvoice"/></transition>
-    <transition name="editPayment"><default-response url="//${appRoot}/Accounting/Payment/EditPayment"/></transition>
-    <transition name="editPaymentMethod"><default-response url="//${appRoot}/Party/PaymentMethod/EditPaymentMethod"/></transition>
 
     <transition name="createOrderPart"><service-call name="mantle.order.OrderServices.create#OrderPart"/>
         <default-response url="."/></transition>
@@ -158,7 +166,9 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="UpdatePaymentMethodInfo" location="component://SimpleScreens/screen/SimpleScreens/Party/EditParty/UpdatePaymentMethodInfo.xml"/>
     </subscreens>
     <actions>
-        <service-call name="mantle.order.OrderInfoServices.get#OrderDisplayInfo" in-map="[orderId:orderId]" out-map="context"/>
+        <set field="defaultItemLimit" from="10"/>
+        <set field="itemLimit" from="itemLimit ?: defaultItemLimit"/>
+        <service-call name="mantle.order.OrderInfoServices.get#OrderDisplayInfo" in-map="[orderId:orderId, itemLimit:(itemLimit as Integer)]" out-map="context"/>
         <set field="firstPartInfo" from="orderPartInfoList[0]"/>
 
         <set field="vendorRole" value="OrgInternal,Supplier,Vendor"/>
@@ -178,6 +188,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </row-col><row-col sm="6">
                     <label text="Web Order (ecommerce)" condition="orderHeader?.salesChannelEnumId == 'ScWeb'" type="h4" style="text-success"/>
                 </row-col></container-row>
+                <label text="Recurring Order: ${recurCronDescription}" condition="recurCronDescription" type="h4" style="text-success"/>
 
                 <section name="PlaceSection" condition="orderHeader.statusId in ['OrderOpen', 'OrderProposed', 'OrderBeingChanged', 'OrderHold']"><widgets>
                     <link url="placeOrder" text="Place" link-type="hidden-form" condition="!placeWarnings" style="btn-success"/>
@@ -238,12 +249,43 @@ along with this software (see the LICENSE.md file). If not, see
 
                 <link url="PrintOrder.pdf" text="Order PDF"/>
 
+                <container-dialog id="RecurDialog" button-text="Recurring" type="${orderHeader.recurCronExpression ? (orderHeader.statusId == 'OrderApproved' ? 'success' : 'warning') : 'primary'}">
+                    <label text="Order is not in Approved status" type="p" style="text-warning" condition="orderHeader.statusId != 'OrderApproved'"/>
+                    <label text="Recurring orders in the Approved status will be automatically cloned according to the schedule and the clone will be automatically Placed. If there are no Approve Warnings the cloned order will be automatically Approved. If Auto Invoice is set to Y then if Approved will also create an Invoice for the Order." type="p"/>
+                    <form-single name="RecurOptions" map="orderHeader" transition="updateOrderRecur">
+                        <field name="orderId"><default-field><hidden/></default-field></field>
+                        <field name="recurCronExpression"><default-field title="Recur Schedule"><drop-down allow-empty="true">
+                            <option key="${cronExpression}" text="Current: ${recurCronDescription ?: 'None'}"/><!-- NOTE: first in list so that if matches another option will be overridden -->
+                            <option key="0 0 2 ? * MON" text="Weekly on Monday at 2 AM"/>
+                            <option key="0 0 2 1 * ?" text="Monthly on the 1st at 2 AM"/>
+                            <option key="0 0 2 15 * ?" text="Monthly on the 15th at 2 AM"/>
+                        </drop-down></default-field></field>
+                        <field name="recurAutoInvoice"><default-field title="Auto Invoice">
+                            <radio no-current-selected-key="N"><option key="Y"/><option key="N"/></radio>
+                        </default-field></field>
+                        <field name="lodInfo"><default-field title="">
+                            <label text="Last Ordered Date will be updated over time as recurring Order Clones are created." type="p"/>
+                            <label text="If Last Ordered Date is empty the next Order Clone will be created with the next batch." type="p"/>
+                            <label text="To not create the next Order Clone until the scheduled time, set this to now or any time since the last scheduled time." type="p"/>
+                        </default-field></field>
+                        <field name="lastOrderedDate"><default-field>
+                            <date-time/></default-field></field>
+
+                        <field name="submitButton"><default-field title="Update"><submit/></default-field></field>
+                    </form-single>
+                </container-dialog>
+
                 <section-iterate name="InvoiceLinks" list="invoiceIdSet" entry="invoiceId"><widgets>
                     <link url="editInvoice" text="Invoice ${invoiceId}" link-type="anchor-button"/>
                 </widgets></section-iterate>
 
                 <form-single name="HeaderForm" transition="updateOrderHeader" map="orderHeader">
                     <field name="orderId"><default-field><hidden/></default-field></field>
+
+                    <field name="parentOrderId"><conditional-field title="Parent Order" condition="parentOrderId">
+                        <link url="." text="${parentOrderId}" parameter-map="[orderId:parentOrderId]" link-type="anchor"/>
+                    </conditional-field></field>
+
                     <field name="statusId"><default-field title="Status">
                         <display text="${statusItem.description}"/></default-field></field>
                     <field name="entryDate"><default-field title="Entry"><display/></default-field></field>
@@ -253,7 +295,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <conditional-field condition="orderEditable"><text-line size="40"/></conditional-field>
                         <default-field title="Name"><display/></default-field>
                     </field>
-                    <field name="orderRevision"><default-field title="Revision"><display/></default-field></field>
+                    <field name="orderRevision"><default-field title="Revision"><display also-hidden="false"/></default-field></field>
                     <field name="salesChannelEnumId">
                         <conditional-field condition="orderEditable" title="Source">
                             <widget-template-include location="component://webroot/template/screen/BasicWidgetTemplates.xml#enumDropDown">
@@ -280,13 +322,14 @@ along with this software (see the LICENSE.md file). If not, see
                         <default-field><display/></default-field>
                     </field>
                     <field name="externalRevision"><conditional-field title="Ext Rev" condition="externalRevision">
-                        <display/></conditional-field></field>
+                        <display also-hidden="false"/></conditional-field></field>
                     <field name="grandTotal"><default-field><display currency-unit-field="currencyUomId"/></default-field></field>
                     <field name="submitButton">
                         <conditional-field condition="orderEditable" title="Update Header"><submit/></conditional-field>
                         <default-field><ignored/></default-field>
                     </field>
                     <field-layout>
+                        <field-ref name="parentOrderId"/>
                         <field-row><field-ref name="statusId"/><field-ref name="orderRevision"/></field-row>
                         <field-row><field-ref name="entryDate"/><field-ref name="placedDate"/></field-row>
                         <field-ref name="orderName"/>
@@ -336,11 +379,22 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="thruDate"><default-field title="Code Expires"><display/></default-field></field>
                             <field name="promoThruDate"><default-field title="Promo Expires"><display/></default-field></field>
                             <field name="promoThruDate"><default-field title="Promo Expires"><display/></default-field></field>
-                            <field name="removeButton"><default-field title=""><submit icon="glyphicon glyphicon-trash"/></default-field></field>
+                            <field name="removeButton"><default-field title=""><submit icon="fa fa-trash"/></default-field></field>
                         </form-list>
                     </box-body-nopad></container-box>
                 </widgets></section>
             </row-col><row-col lg="6">
+                <section name="ItemLimitSection" condition="orderItemNoParentCount &gt; defaultItemLimit"><widgets>
+                    <form-single name="ItemLimitForm">
+                        <field name="orderId"><default-field><hidden/></default-field></field>
+                        <field name="itemLimit"><default-field><drop-down>
+                            <option key="10"/><option key="20"/><option key="50"/><option key="100"/>
+                        </drop-down></default-field></field>
+                        <field name="submitBtn"><default-field title="Update"><submit/></default-field></field>
+                        <field-layout><field-row-big><field-ref name="itemLimit"/><field-ref name="submitBtn"/></field-row-big></field-layout>
+                    </form-single>
+                </widgets></section>
+
                 <section-include name="StatusHistorySection" location="component://SimpleScreens/template/basic/StatusWidgets.xml"/>
 
                 <section name="CustomerNotesSection"><actions>
@@ -429,9 +483,10 @@ along with this software (see the LICENSE.md file). If not, see
                         </container></widgets></section-iterate>
                     </box-body></container-box>
                 </widgets></section>
+
                 <section name="EmailMessageSection"><widgets>
                     <container-box><box-header title="Email Messages"/><box-toolbar>
-                        <section name="SendPlacedEmailSection" condition="!(orderHeader.statusId in ['OrderBeingChanged', 'OrderOpen', 'OrderRequested', 'OrderProposed'])"><actions>
+                        <section name="SendPlacedEmailSection" condition="!(orderHeader.statusId in ['OrderBeingChanged'])"><actions>
                             <set field="customerPartyId" from="orderPartList[0].customerPartyId"/>
                             <if condition="customerPartyId">
                                 <service-call name="mantle.party.ContactServices.get#PartyContactInfo" out-map="emailInfo"
@@ -470,6 +525,39 @@ along with this software (see the LICENSE.md file). If not, see
                             </default-field></field>
                         </form-list>
                     </box-body-nopad></container-box>
+                </widgets></section>
+
+                <section name="SystemMessageSection" condition="systemMessageList"><widgets>
+                    <container-box><box-header title="System Messages"/><box-body-nopad>
+                        <form-list name="SystemMessageList" list="systemMessageList" skip-form="true">
+                            <field name="systemMessageId"><default-field title="Message">
+                                <link url="systemMessageDetail" text="${systemMessageId}" link-type="anchor"/>
+                            </default-field></field>
+                            <field name="isOutgoing"><default-field title="In/Out"><display text="${isOutgoing == 'Y' ? 'Out' : 'In'}"/></default-field></field>
+                            <field name="initDate"><default-field title="Init"><display/></default-field></field>
+                            <field name="processedDate"><default-field title="Processed"><display/></default-field></field>
+                            <field name="statusId"><default-field title="Status">
+                                <display-entity entity-name="moqui.basic.StatusItem"/></default-field></field>
+                            <field name="systemMessageTypeId"><default-field title="Type">
+                                <display-entity entity-name="moqui.service.message.SystemMessageType" text="${description}"/></default-field></field>
+                            <field name="systemMessageRemoteId"><default-field title="Remote">
+                                <display-entity entity-name="moqui.service.message.SystemMessageRemote" text="${description}"/></default-field></field>
+                        </form-list>
+                    </box-body-nopad></container-box>
+                </widgets></section>
+
+                <section name="ChildOrders" condition="childOrderList"><widgets>
+                    <container-box><box-header title="Child/Cloned Orders"/><box-body>
+                        <form-list name="ChildOrderList" list="childOrderList" skip-form="true">
+                            <field name="orderId"><default-field title="Order">
+                                <link url="." text="${orderId}" link-type="anchor"/></default-field></field>
+                            <field name="statusId"><default-field title="Status">
+                                <display-entity entity-name="moqui.basic.StatusItem"/></default-field></field>
+                            <field name="entryDate"><default-field><display/></default-field></field>
+                            <field name="approvedDate"><default-field title="Approved"><display/></default-field></field>
+                            <field name="grandTotal"><default-field title="Total"><display format="#,##0.00"/></default-field></field>
+                        </form-list>
+                    </box-body></container-box>
                 </widgets></section>
             </row-col></container-row>
         </widgets></section>
@@ -537,7 +625,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <container><label text="${orderPartInfo.isVendorInternalOrg ? 'Sales' : 'Purchase'} Order Part ${orderPart.orderPartSeqId}" type="strong"/></container>
 
                     <section name="ShipOrderPartSection"><condition>
-                        <expression>quantityNotShippedByPart.get(orderPart.orderPartSeqId) &gt; 0 &amp;&amp;
+                        <expression>quantityNotShippedByPart.get(orderPart.orderPartSeqId) &gt; 0 &amp;&amp; !orderHeader.recurCronExpression &amp;&amp;
                             (orderHeader.statusId == "OrderApproved" || orderHeader.statusId == "OrderSent")</expression>
                     </condition><actions>
                         <!-- find Shipments from same vendor going to same address and ship method, in Input or Scheduled status -->
@@ -663,8 +751,8 @@ along with this software (see the LICENSE.md file). If not, see
 
                     <link url="invoiceOrderPart" text="Create Invoice" link-type="hidden-form"
                             parameter-map="[orderPartSeqId:orderPart.orderPartSeqId]"
-                            condition="quantityNotBilledByPart.get(orderPartInfo.orderPart.orderPartSeqId)"/>
-                    <link url="createReturnFromOrder" text="Create Return" condition="!orderPartInfo.openReturnList"
+                            condition="quantityNotBilledByPart.get(orderPartInfo.orderPart.orderPartSeqId) &amp;&amp; !orderHeader.recurCronExpression"/>
+                    <link url="createReturnFromOrder" text="Create Return" condition="!orderPartInfo.openReturnList &amp;&amp; !orderHeader.recurCronExpression"
                             confirmation="Really create return for this order part?"
                             parameter-map="[orderId:orderId, orderPartSeqId:orderPart.orderPartSeqId]"/>
                     <link url="cancelOrderPart" text="Close Part" link-type="hidden-form" btn-type="warning"
@@ -766,7 +854,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <link url="editFacility" text="FacilityNameTemplate" text-map="orderPartInfo.facility"
                                     parameter-map="[facilityId:orderPartInfo.facility.facilityId]" link-type="anchor"
                                     condition="orderPartInfo.facility"/>
-                            <render-mode><text type="html,vuet" location="component://SimpleScreens/template/party/ContactInfo.html.gstring"/></render-mode>
+                            <render-mode><text type="html,vuet,qvt" location="component://SimpleScreens/template/party/ContactInfo.html.gstring"/></render-mode>
                         </container>
                     </container>
                     <section-iterate name="OrderPartRoleSection" list="orderPartInfo.orderPartPartyList" entry="orderPartParty"><widgets>
@@ -870,7 +958,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             condition="partPaymentInfo.partPayment.paymentMethodId != null"/>
                                 </container>
 
-                                <render-mode><text type="html,vuet" location="component://SimpleScreens/template/party/PaymentMethodInfo.html.gstring"/></render-mode>
+                                <render-mode><text type="html,vuet,qvt" location="component://SimpleScreens/template/party/PaymentMethodInfo.html.gstring"/></render-mode>
                                 <label text="CIM ID: ${methodInfo.paymentMethod.gatewayCimId}" type="div" condition="methodInfo.paymentMethod?.gatewayCimId"/>
                                 <label text="Gateway: ${methodInfo.paymentMethod.gatewayConfig?.description}" type="div" condition="methodInfo.paymentMethod?.paymentGatewayConfigId"/>
                             </container>
@@ -891,10 +979,10 @@ along with this software (see the LICENSE.md file). If not, see
                                 <set field="checkRadio" from="(orderPart.postalContactMechId &amp;&amp; orderPart.postalContactMechId == contactInfo.postalContactMechId) || (!orderPart.postalContactMechId &amp;&amp; postalAddressInfo_index == 0)"/>
                             </actions><widgets>
                                 <container type="li" style="box-narrow${checkRadio ? ' active' : ''}">
-                                    <render-mode><text type="html,vuet"><![CDATA[
+                                    <render-mode><text type="html,vuet,qvt"><![CDATA[
                                         <div class="text-center"><input type="radio" name="shippingPostalContactMechId_${orderPartInfo_index}" value="${contactInfo.postalContactMechId}"<#if checkRadio> checked="checked"</#if>></div>
                                     ]]></text></render-mode>
-                                    <render-mode><text type="html,vuet" location="component://SimpleScreens/template/party/ContactInfo.html.gstring"/></render-mode>
+                                    <render-mode><text type="html,vuet,qvt" location="component://SimpleScreens/template/party/ContactInfo.html.gstring"/></render-mode>
                                     <dynamic-dialog id="UpdatePostalInfo" button-text="Update Address" transition="UpdateContactInfo"
                                             width="800" condition="orderPartInfo.partEditable"
                                             parameter-map="[partyId:customerPartyId, postalContactMechId:contactInfo.postalContactMechId,
@@ -940,7 +1028,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field-layout><field-row-big><field-ref name="carrierAndShipmentMethod"/>
                                 <field-ref name="submitButton"/></field-row-big></field-layout>
                         </form-single>
-                        <render-mode><text type="html,vuet"><![CDATA[
+                        <render-mode><text type="html,vuet,qvt"><![CDATA[
                             <script>
                                 $("#SetOrderInfoForm_shippingPostalContactMechId_${orderPartInfo_index}").val($("input[name=shippingPostalContactMechId_${orderPartInfo_index}]:checked").val());
                                 $("input[name=shippingPostalContactMechId_${orderPartInfo_index}]:radio").change( function() { $("#SetOrderInfoForm_shippingPostalContactMechId_${orderPartInfo_index}").val($("input[name=shippingPostalContactMechId_${orderPartInfo_index}]:checked").val()); })
@@ -966,7 +1054,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </drop-down>
                         </default-field></field>
                         <field name="productId"><default-field title="Product">
-                            <drop-down><dynamic-options transition="getProductList" server-search="true" min-length="0">
+                            <drop-down><dynamic-options transition="getProductList" server-search="true" min-length="0" depends-optional="true">
                                 <depends-on field="assetClassEnumId"/></dynamic-options></drop-down>
                         </default-field></field>
                         <field name="quantity"><default-field><text-line size="8" default-value="1"/></default-field></field>
@@ -1027,27 +1115,31 @@ along with this software (see the LICENSE.md file). If not, see
                 </container-dialog>
                 <link url="../QuickItems" text="Quick Add Items"/>
 
-                <link url="updateOrderPart" text="Ship Calc" btn-type="danger" icon="glyphicon glyphicon-remove"
+                <link url="updateOrderPart" text="Ship Calc" btn-type="danger" icon="fa fa-remove"
                         condition="orderPart.disableShippingCalc == 'Y'"
                         parameter-map="[orderId:orderId, orderPartSeqId:orderPart.orderPartSeqId, disableShippingCalc:'N']"/>
-                <link url="updateOrderPart" text="Ship Calc" btn-type="success" icon="glyphicon glyphicon-ok"
+                <link url="updateOrderPart" text="Ship Calc" btn-type="success" icon="fa fa-check"
                         condition="orderPart.disableShippingCalc != 'Y'"
                         parameter-map="[orderId:orderId, orderPartSeqId:orderPart.orderPartSeqId, disableShippingCalc:'Y']"/>
 
-                <link url="updateOrderPart" text="Tax Calc" btn-type="danger" icon="glyphicon glyphicon-remove"
+                <link url="updateOrderPart" text="Tax Calc" btn-type="danger" icon="fa fa-remove"
                         condition="orderPart.disableTaxCalc == 'Y'"
                         parameter-map="[orderId:orderId, orderPartSeqId:orderPart.orderPartSeqId, disableTaxCalc:'N']"/>
-                <link url="updateOrderPart" text="Tax Calc" btn-type="success" icon="glyphicon glyphicon-ok"
+                <link url="updateOrderPart" text="Tax Calc" btn-type="success" icon="fa fa-check"
                         condition="orderPart.disableTaxCalc != 'Y'"
                         parameter-map="[orderId:orderId, orderPartSeqId:orderPart.orderPartSeqId, disableTaxCalc:'Y']"/>
 
-                <link url="updateOrderPart" text="Promos" btn-type="danger" icon="glyphicon glyphicon-remove"
+                <link url="updateOrderPart" text="Promos" btn-type="danger" icon="fa fa-remove"
                         condition="orderPart.disablePromotions == 'Y'"
                         parameter-map="[orderId:orderId, orderPartSeqId:orderPart.orderPartSeqId, disablePromotions:'N']"/>
-                <link url="updateOrderPart" text="Promos" btn-type="success" icon="glyphicon glyphicon-ok"
+                <link url="updateOrderPart" text="Promos" btn-type="success" icon="fa fa-check"
                         condition="orderPart.disablePromotions != 'Y'"
                         parameter-map="[orderId:orderId, orderPartSeqId:orderPart.orderPartSeqId, disablePromotions:'Y']"/>
             </widgets></section>
+
+            <link url="../OrderItems" text="All Part Items (${orderPartInfo.partNoParentOrderItemCount})" btn-type="info"
+                    condition="orderPartInfo.partNoParentOrderItemCount &gt; orderPartInfo.partNoParentOrderItemList.size()"
+                    parameter-map="[orderId:orderId, orderPartSeqId:orderPartInfo.orderPart.orderPartSeqId]"/>
 
             <form-list name="OrderItems" list="orderPartInfo.partOrderItemList" list-entry="orderItem" transition="updateItem">
                 <row-actions>
@@ -1191,6 +1283,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <default-field><display currency-unit-field="orderHeader.currencyUomId"/></default-field>
                 </field>
                 <field name="unitAmountHist"><default-field title="">
+                    <!-- TODO qvt -->
                     <render-mode><text type="html,vuet"><![CDATA[
                         <#assign popoverContent>
                             <table style="width:100%;"><#list itemUnitAmountAuditList as auditInfo><tr>
@@ -1215,6 +1308,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <default-field title="Quantity Reason"><ignored/></default-field>
                 </field>
                 <field name="quantityHist"><default-field title="">
+                    <!-- TODO qvt -->
                     <render-mode><text type="html,vuet"><![CDATA[
                         <#assign popoverContent>
                             <table style="width:100%;"><#list itemQuantityAuditList as auditInfo><tr>
@@ -1259,7 +1353,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 type="div" style="text-danger"/>
                         <dynamic-dialog id="ItemReserveDialog" button-text="Reserve Assets" transition="ItemReserve" width="960"
                                 condition="orderPartInfo.partEditable || orderPartInfo.orderPart.statusId == 'OrderApproved'"/>
-                        <link url="removeOrderItemReservations" text="" btn-type="danger" icon="glyphicon glyphicon-trash" condition="resInfoList"
+                        <link url="removeOrderItemReservations" text="" btn-type="danger" icon="fa fa-trash" condition="resInfoList"
                                 confirmation="Remove inventory reservations for item ${orderItemSeqId}?"/>
                     </conditional-field>
                     <default-field><display text=" "/></default-field>
@@ -1289,9 +1383,9 @@ along with this software (see the LICENSE.md file). If not, see
 
                 <field name="submitButton"><conditional-field condition="orderPartInfo.partEditable &amp;&amp; isPromo != 'Y'">
                     <submit text="Update"/>
-                    <link url="deleteItem" text="" btn-type="danger" icon="glyphicon glyphicon-trash" condition="itemCanDelete" confirmation="Delete item ${orderItemSeqId}?"/>
+                    <link url="deleteItem" text="" btn-type="danger" icon="fa fa-trash" condition="itemCanDelete" confirmation="Delete item ${orderItemSeqId}?"/>
                 </conditional-field><conditional-field condition="orderPartInfo.partEditable &amp;&amp; isPromo == 'Y'">
-                    <link url="deleteItem" text="" btn-type="danger" icon="glyphicon glyphicon-trash" condition="itemCanDelete" confirmation="Delete item ${orderItemSeqId}?"/>
+                    <link url="deleteItem" text="" btn-type="danger" icon="fa fa-trash" condition="itemCanDelete" confirmation="Delete item ${orderItemSeqId}?"/>
                 </conditional-field><default-field title=""/></field>
 
                 <field name="closeButton"><default-field title="">
@@ -1313,6 +1407,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <form-list-column><field-ref name="submitButton"/><field-ref name="closeButton"/></form-list-column>
             </form-list>
         </widgets></section-iterate>
+        <!-- TODO qvt -->
         <render-mode><text type="html,vuet"><![CDATA[<script>$(function () { $('[data-toggle="popover"]').popover({ sanitize:false, html:true, trigger:"hover click" }); })</script>]]></text></render-mode>
     </widgets>
 </screen>
