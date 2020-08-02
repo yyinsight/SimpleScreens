@@ -17,6 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <parameter name="orderId" required="true"/>
     <parameter name="orderItemSeqId" required="true"/>
+    <parameter name="pageIndex"/>
 
     <transition name="updateItem"><service-call name="mantle.order.OrderServices.update#OrderItem"/>
         <default-response url=".."/></transition>
@@ -44,6 +45,7 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <form-single name="EditOrderItem" transition="updateItem" map="orderItem">
             <field name="orderId"><default-field><hidden/></default-field></field>
+            <field name="pageIndex"><default-field><hidden/></default-field></field>
             <field name="orderItemSeqId"><default-field title="Item"><display/></default-field></field>
             <field name="orderPartSeqId">
                 <conditional-field title="Order Part" condition="partEditable &amp;&amp; isPromo != 'Y'"><drop-down>
@@ -116,6 +118,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <default-field title="Price"><display currency-unit-field="orderHeader.currencyUomId"/></default-field>
             </field>
             <field name="unitAmountHist"><default-field title=" ">
+                <!-- TODO qvt -->
                 <render-mode><text type="html,vuet"><![CDATA[
                     <#assign popoverContent>
                         <table style="width:100%;"><#list itemUnitAmountAuditList as auditInfo><tr>
@@ -147,6 +150,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <default-field><ignored/></default-field>
             </field>
             <field name="quantityHist"><default-field title=" ">
+                <!-- TODO qvt -->
                 <render-mode><text type="html,vuet"><![CDATA[
                     <#assign popoverContent>
                         <table style="width:100%;"><#list itemQuantityAuditList as auditInfo><tr>
@@ -166,8 +170,7 @@ along with this software (see the LICENSE.md file). If not, see
             <field name="itemAmountNotBilled"><default-field title="Amt Not Billed"><display format="#,##0.00"/></default-field></field>
             -->
             <field name="itemNotBilled"><default-field title="Not Billed">
-                <label text="${ec.l10n.format(itemQuantityNotBilled, '#,##0.###')}" condition="isProductItemType"/>
-                <label text="${ec.l10n.format(itemAmountNotBilled, '#,##0.00')}" condition="!isProductItemType"/>
+                <display text="${isProductItemType ? ec.l10n.format(itemQuantityNotBilled, '#,##0.###') : ec.l10n.format(itemAmountNotBilled, '#,##0.00')}"/>
             </default-field></field>
 
 
@@ -185,6 +188,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <field-ref name="submitButton"/>
             </field-layout>
         </form-single>
+        <!-- TODO qvt -->
         <render-mode><text type="html,vuet"><![CDATA[<script>$(function () { $('[data-toggle="popover"]').popover({ sanitize:false, html:true, trigger:"hover click" }); })</script>]]></text></render-mode>
     </widgets>
 </screen>
