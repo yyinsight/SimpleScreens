@@ -16,6 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.basic.LocalizedMessage original="My Account" locale="zh_CN" localized="我的账户"/>
     <moqui.basic.LocalizedMessage original="User" locale="zh_CN" localized="用户"/>
     <moqui.basic.LocalizedMessage original="Notifications" locale="zh_CN" localized="通知"/>
+    <moqui.basic.LocalizedMessage original="Active Organization" locale="zh_CN" localized="当前组织机构"/>
 
 
 
