@@ -15,9 +15,30 @@ along with this software (see the LICENSE.md file). If not, see
 <entity-facade-xml type="seed">
     <moqui.basic.LocalizedMessage original="My Account" locale="zh_CN" localized="我的账户"/>
     <moqui.basic.LocalizedMessage original="User" locale="zh_CN" localized="用户"/>
-    <moqui.basic.LocalizedMessage original="Notifications" locale="zh_CN" localized="通知"/>
-    <moqui.basic.LocalizedMessage original="Active Organization" locale="zh_CN" localized="当前组织机构"/>
+    <moqui.basic.LocalizedMessage original="Expense" locale="zh_CN" localized="费用"/>
 
+    <moqui.basic.LocalizedMessage original="Notifications" locale="zh_CN" localized="通知"/>
+    <moqui.basic.LocalizedMessage original="Topic Subscriptions" locale="zh_CN" localized="标题订阅"/>
+    <moqui.basic.LocalizedMessage original="Receive" locale="zh_CN" localized="接收"/>
+    <moqui.basic.LocalizedMessage original="Email" locale="zh_CN" localized="电子邮件"/>
+    <moqui.basic.LocalizedMessage original="Email Notifications" locale="zh_CN" localized="邮件通知"/>
+    <moqui.basic.LocalizedMessage original="Y" locale="zh_CN" localized="是"/>
+    <moqui.basic.LocalizedMessage original="N" locale="zh_CN" localized="否"/>
+
+    <moqui.basic.LocalizedMessage original="Select" locale="zh_CN" localized="选择"/>
+    <moqui.basic.LocalizedMessage original="Message" locale="zh_CN" localized="消息"/>
+    <moqui.basic.LocalizedMessage original="Topic" locale="zh_CN" localized="标题"/>
+    <moqui.basic.LocalizedMessage original="Sent" locale="zh_CN" localized="已发送"/>
+    <moqui.basic.LocalizedMessage original="Notified" locale="zh_CN" localized="已通知"/>
+    <moqui.basic.LocalizedMessage original="Viewed" locale="zh_CN" localized="已查看"/>
+    <moqui.basic.LocalizedMessage original="Messages" locale="zh_CN" localized="消息"/>
+    <moqui.basic.LocalizedMessage original="Calendar" locale="zh_CN" localized="日历"/>
+    <moqui.basic.LocalizedMessage original="Task" locale="zh_CN" localized="任务"/>
+    <moqui.basic.LocalizedMessage original="Request" locale="zh_CN" localized="请求"/>
+    <moqui.basic.LocalizedMessage original="Time" locale="zh_CN" localized="工时"/>
+    <moqui.basic.LocalizedMessage original="Contact Info" locale="zh_CN" localized="联系信息"/>
+    <moqui.basic.LocalizedMessage original="Scheduled Finds" locale="zh_CN" localized="预设查询"/>
+    <moqui.basic.LocalizedMessage original="Account" locale="zh_CN" localized="个人信息"/>
 
 
 </entity-facade-xml>
