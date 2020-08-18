@@ -31,6 +31,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.basic.LocalizedMessage original="Sent" locale="zh_CN" localized="已发送"/>
     <moqui.basic.LocalizedMessage original="Notified" locale="zh_CN" localized="已通知"/>
     <moqui.basic.LocalizedMessage original="Viewed" locale="zh_CN" localized="已查看"/>
+
     <moqui.basic.LocalizedMessage original="Messages" locale="zh_CN" localized="消息"/>
     <moqui.basic.LocalizedMessage original="Calendar" locale="zh_CN" localized="日历"/>
     <moqui.basic.LocalizedMessage original="Task" locale="zh_CN" localized="任务"/>
@@ -39,6 +40,8 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.basic.LocalizedMessage original="Contact Info" locale="zh_CN" localized="联系信息"/>
     <moqui.basic.LocalizedMessage original="Scheduled Finds" locale="zh_CN" localized="预设查询"/>
     <moqui.basic.LocalizedMessage original="Account" locale="zh_CN" localized="个人信息"/>
+
+    <moqui.basic.LocalizedMessage original="Active Organization" locale="zh_CN" localized="活动组织"/>
 
 
 </entity-facade-xml>
