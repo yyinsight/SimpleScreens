@@ -44,7 +44,8 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.basic.LocalizedEntityField entityName="moqui.security.user.NotificationTopic" fieldName="description" pkValue="MantleWikiPage" locale="zh_CN" localized="Wiki更新"/>
 
     <moqui.entity.feed.DataFeed dataFeedId="MyAccountNotifications" dataFeedTypeEnumId="DTFDTP_RT_PUSH"
-            feedName="MyAccount Notifications" feedReceiveServiceName="mantle.party.PartyServices.send#DataDocumentNotifications">
+            feedName="MyAccount Notifications" feedReceiveServiceName="mantle.party.PartyServices.send#DataDocumentNotifications"
+            feedDeleteServiceName="org.moqui.impl.BasicServices.noop">
         <documents dataDocumentId="MantleTask"/>
         <documents dataDocumentId="MantleEvent"/>
         <documents dataDocumentId="MantleCommunicationEvent"/>
