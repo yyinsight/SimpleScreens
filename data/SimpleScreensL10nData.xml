@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <entity-facade-xml type="seed">
     <moqui.basic.LocalizedMessage original="My Account" locale="zh_CN" localized="我的账户"/>
     <moqui.basic.LocalizedMessage original="User" locale="zh_CN" localized="用户"/>
-    <moqui.basic.LocalizedMessage original="Expense" locale="zh_CN" localized="费用"/>
+    <moqui.basic.LocalizedMessage original="Expenses" locale="zh_CN" localized="费用"/>
 
     <moqui.basic.LocalizedMessage original="Notifications" locale="zh_CN" localized="通知"/>
     <moqui.basic.LocalizedMessage original="Topic Subscriptions" locale="zh_CN" localized="标题订阅"/>
