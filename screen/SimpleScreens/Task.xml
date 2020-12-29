@@ -13,10 +13,18 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
-        default-menu-title="Report Builder" default-menu-index="30" menu-image="fa fa-database" menu-image-type="icon">
-    <subscreens default-item="FindReport"/>
-    <pre-actions>
-        <set field="excludeFilter" value="(moqui\\.).*"/>
-    </pre-actions>
-    <widgets><subscreens-panel id="SimpleReportPanel" type="tab"/></widgets>
+        default-menu-title="Tasks" default-menu-index="4" menu-image="/ssstatic/images/task-homework.png">
+
+    <subscreens default-item="FindTask"/>
+
+    <actions>
+        <if condition="workEffortId">
+            <entity-find-one entity-name="mantle.work.effort.WorkEffort" value-field="task"/>
+            <if condition="task == null"><return error="true" message="Task not found for ID ${workEffortId}"/></if>
+        </if>
+    </actions>
+    <widgets>
+        <label text="Task ${task.workEffortId} - ${task.workEffortName}" type="strong" condition="task != null"/>
+        <subscreens-panel id="task-panel" type="tab"/>
+    </widgets>
 </screen>
