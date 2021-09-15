@@ -39,9 +39,11 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.basic.LocalizedMessage original="Time" locale="zh_CN" localized="工时"/>
     <moqui.basic.LocalizedMessage original="Contact Info" locale="zh_CN" localized="联系信息"/>
     <moqui.basic.LocalizedMessage original="Scheduled Finds" locale="zh_CN" localized="预设查询"/>
-    <moqui.basic.LocalizedMessage original="Account" locale="zh_CN" localized="个人信息"/>
+    <moqui.basic.LocalizedMessage original="Account" locale="zh_CN" localized="帐户"/>
 
     <moqui.basic.LocalizedMessage original="Active Organization" locale="zh_CN" localized="活动组织"/>
+
+    <moqui.basic.LocalizedMessage original="Any Type" locale="zh_CN" localized="任何类型"/>
 
 
 </entity-facade-xml>
