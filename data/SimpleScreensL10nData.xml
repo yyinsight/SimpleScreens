@@ -41,9 +41,57 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.basic.LocalizedMessage original="Scheduled Finds" locale="zh_CN" localized="预设查询"/>
     <moqui.basic.LocalizedMessage original="Account" locale="zh_CN" localized="帐户"/>
 
-    <moqui.basic.LocalizedMessage original="Active Organization" locale="zh_CN" localized="活动组织"/>
-
     <moqui.basic.LocalizedMessage original="Any Type" locale="zh_CN" localized="任何类型"/>
+
+    <moqui.basic.LocalizedMessage original="Dashboard" locale="zh_CN" localized="仪表盘"/>
+    <moqui.basic.LocalizedMessage original="Internal" locale="zh_CN" localized="内部"/>
+
+    <moqui.basic.LocalizedMessage original="Quick Search" locale="zh_CN" localized="快速查找"/>
+    <moqui.basic.LocalizedMessage original="Projects" locale="zh_CN" localized="项目"/>
+    <moqui.basic.LocalizedMessage original="Accounting" locale="zh_CN" localized="财务"/>
+    <moqui.basic.LocalizedMessage original="Asset" locale="zh_CN" localized="资产"/>
+    <moqui.basic.LocalizedMessage original="Catalog" locale="zh_CN" localized="物料目录"/>
+
+    <moqui.basic.LocalizedMessage original="Customers" locale="zh_CN" localized="客户"/>
+    <moqui.basic.LocalizedMessage original="Find Customer" locale="zh_CN" localized="客户列表"/>
+    <moqui.basic.LocalizedMessage original="Customer Data" locale="zh_CN" localized="客户数据"/>
+
+    <moqui.basic.LocalizedMessage original="Facility" locale="zh_CN" localized="场所设施"/>
+    <moqui.basic.LocalizedMessage original="Human Resources" locale="zh_CN" localized="人力资源"/>
+    <moqui.basic.LocalizedMessage original="Manufacturing" locale="zh_CN" localized="制造"/>
+
+    <moqui.basic.LocalizedMessage original="Orders" locale="zh_CN" localized="订单"/>
+    <moqui.basic.LocalizedMessage original="Sales" locale="zh_CN" localized="销售"/>
+
+    <moqui.basic.LocalizedMessage original="Parties" locale="zh_CN" localized="团体"/>
+    <moqui.basic.LocalizedMessage original="Find Party" locale="zh_CN" localized="团体列表"/>
+    <moqui.basic.LocalizedMessage original="New Person" locale="zh_CN" localized="新建个人"/>
+    <moqui.basic.LocalizedMessage original="New Person Customer" locale="zh_CN" localized="新建个人客户"/>
+    <moqui.basic.LocalizedMessage original="New Employee" locale="zh_CN" localized="新建员工"/>
+    <moqui.basic.LocalizedMessage original="New Organization" locale="zh_CN" localized="新建组织机构"/>
+    <moqui.basic.LocalizedMessage original="New Sales Account" locale="zh_CN" localized="新建销售账户"/>
+    <moqui.basic.LocalizedMessage original="New Sales Contact" locale="zh_CN" localized="新建销售联系"/>
+
+    <moqui.basic.LocalizedMessage original="Requests" locale="zh_CN" localized="需求"/>
+    <moqui.basic.LocalizedMessage original="Returns" locale="zh_CN" localized="退货"/>
+    <moqui.basic.LocalizedMessage original="Shipments" locale="zh_CN" localized="运输"/>
+    <moqui.basic.LocalizedMessage original="Shipping" locale="zh_CN" localized="包装"/>
+    <moqui.basic.LocalizedMessage original="Stores" locale="zh_CN" localized="仓储"/>
+
+    <moqui.basic.LocalizedMessage original="Suppliers" locale="zh_CN" localized="供应商"/>
+    <moqui.basic.LocalizedMessage original="Find Supplier" locale="zh_CN" localized="供应商列表"/>
+    <moqui.basic.LocalizedMessage original="New Person Supplier" locale="zh_CN" localized="新建个人供应商"/>
+    <moqui.basic.LocalizedMessage original="New Organization Supplier" locale="zh_CN" localized="新建机构供应商"/>
+    <moqui.basic.LocalizedMessage original="New Organization Supplier" locale="zh_CN" localized="新建机构供应商"/>
+
+
+    <moqui.basic.LocalizedMessage original="Facility" locale="zh_CN" localized="场所设施"/>
+    <moqui.basic.LocalizedMessage original="Survey" locale="zh_CN" localized="问卷调查"/>
+    <moqui.basic.LocalizedMessage original="Tasks" locale="zh_CN" localized="工单"/>
+    <moqui.basic.LocalizedMessage original="Wiki/Content" locale="zh_CN" localized="维基/内容"/>
+    <moqui.basic.LocalizedMessage original="Custom Reports" locale="zh_CN" localized="定制报表"/>
+    <moqui.basic.LocalizedMessage original="Report Viewer" locale="zh_CN" localized="报表查看器"/>
+    <moqui.basic.LocalizedMessage original="Report Builder" locale="zh_CN" localized="报表编辑器"/>
 
 
 </entity-facade-xml>

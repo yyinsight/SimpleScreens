@@ -81,6 +81,6 @@ along with this software (see the LICENSE.md file). If not, see
         </form-list>
 
         <container-row><row-col md="2" style="text-right"><label text="Current Search String" type="strong"/></row-col>
-            <row-col><label text="${queryString?:'No Current Search'}"/></row-col></container-row>
+            <row-col><label text="${queryString?:ec.l10n.localize('No Current Search')}"/></row-col></container-row>
     </widgets>
 </screen>
