@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Author: Yuan Ying
+    Created Stamp: 10/9/2021 09:45
+    Content: Status related transitions and forms
+-->
+
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+        default-menu-include="false">
+
+    <transition name="searchStatusList">
+        <parameter name="statusTypeId"/>
+        <actions>
+            <log level="warn" message="In searchStatusList transition statusId=${statusId}"/>
+            <set field="statusTypeId" from="statusTypeId"/>
+            <entity-find entity-name="moqui.basic.StatusItem" list="statusList">
+                <econdition field-name="statusTypeId" from="statusTypeId"/>
+                <order-by field-name="sequenceNum"/>
+            </entity-find>
+            <script>ec.web.sendJsonResponse(statusList)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+
+    <widgets></widgets>
+</screen>

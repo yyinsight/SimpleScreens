@@ -93,5 +93,6 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.basic.LocalizedMessage original="Report Viewer" locale="zh_CN" localized="报表查看器"/>
     <moqui.basic.LocalizedMessage original="Report Builder" locale="zh_CN" localized="报表编辑器"/>
 
+    <moqui.basic.LocalizedMessage original="Active Organization" locale="zh_CN" localized="当前组织"/>
 
 </entity-facade-xml>
